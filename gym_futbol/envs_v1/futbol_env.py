@@ -229,9 +229,9 @@ class Futbol(gym.Env):
             s.collision_type = 1
 
         self.static = static
-        self.space.add(static)
+        self.space.add(*static)
         self.static_goal = static_goal
-        self.space.add(static_goal)
+        self.space.add(*static_goal)
 
     def render(self):
         padding = 5

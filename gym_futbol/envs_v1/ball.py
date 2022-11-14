@@ -44,7 +44,7 @@ class Ball():
         body = pymunk.Body(mass, moment)
 
         body.position = x, y
-        body.start_position = Vec2d(body.position)
+        body.start_position = Vec2d(x, y)
 
         def limit_velocity(body, gravity, damping, dt):
             pymunk.Body.update_velocity(body, gravity, damping, dt)
