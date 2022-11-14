@@ -1,4 +1,5 @@
 import gym
+import pygame
 from gym import error, spaces, utils
 from gym.utils import seeding
 
@@ -19,6 +20,7 @@ import matplotlib.pyplot as plt
 WIDTH = 105
 HEIGHT = 68
 GOAL_SIZE = 20
+PLAYER_RADIUS = 15
 
 TOTAL_TIME = 30  # 30 s
 
@@ -60,11 +62,12 @@ def get_vec(coor_t, coor_o):
 
 
 class Futbol(gym.Env):
-    def __init__(self, width=WIDTH, height=HEIGHT,
+    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER):
         self.width = width
         self.height = height
+        self.player_radius = player_radius
         self.total_time = total_time
         self.debug = debug
         self.number_of_player = number_of_player
@@ -103,16 +106,18 @@ class Futbol(gym.Env):
 
         # Teams
         self.team_A = Team(self.space, width, height,
+                           player_radius=self.player_radius,
                            player_weight=PLAYER_WEIGHT,
                            player_max_velocity=PLAYER_MAX_VELOCITY,
-                           color=(1, 0, 0, 1),  # red
+                           color=pygame.Color("red"),  # red
                            side="left",
                            player_number=self.number_of_player)
 
         self.team_B = Team(self.space, width, height,
+                           player_radius=self.player_radius,
                            player_weight=PLAYER_WEIGHT,
                            player_max_velocity=PLAYER_MAX_VELOCITY,
-                           color=(0, 0, 1, 1),  # red
+                           color=pygame.Color("blue"),  # blue
                            side="right",
                            player_number=self.number_of_player)
 

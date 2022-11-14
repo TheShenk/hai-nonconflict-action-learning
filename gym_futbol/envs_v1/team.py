@@ -7,7 +7,7 @@ import random
 
 class Team():
 
-    def __init__(self, space, width, height, player_weight,
+    def __init__(self, space, width, height, player_radius, player_weight,
                  player_max_velocity, color=(1, 0, 0, 1), side="left",
                  player_number=2, elasiticity=0.2):
         self.space = space
@@ -24,6 +24,7 @@ class Team():
         for x, y, c in zip(self.x_pos_array, self.y_pos_array, self.color_array):
             self.player_array.append(
                 Player(self.space, x, y,
+                       radius=player_radius,
                        mass=player_weight,
                        color=c,
                        max_velocity=player_max_velocity,
