@@ -20,7 +20,9 @@ import matplotlib.pyplot as plt
 WIDTH = 105
 HEIGHT = 68
 GOAL_SIZE = 20
-PLAYER_RADIUS = 15
+
+PLAYER_RADIUS = 1.5
+BALL_RADIUS = 1
 
 TOTAL_TIME = 30  # 30 s
 
@@ -62,7 +64,8 @@ def get_vec(coor_t, coor_o):
 
 
 class Futbol(gym.Env):
-    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS,
+    def __init__(self, width=WIDTH, height=HEIGHT,
+                 player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER):
         self.width = width
@@ -127,6 +130,7 @@ class Futbol(gym.Env):
         self.ball = Ball(self.space, self.width * 0.5, self.height * 0.5,
                          mass=BALL_WEIGHT,
                          max_velocity=BALL_MAX_VELOCITY,
+                         radius=ball_radius,
                          elasticity=0.2)
 
         self.observation = self.reset()
@@ -238,7 +242,7 @@ class Futbol(gym.Env):
         self.static_goal = static_goal
         self.space.add(*static_goal)
 
-    def render(self):
+    def render(self, mode):
         padding = 5
         ax = plt.axes(xlim=(0 - padding, self.width + padding),
                       ylim=(0 - padding, self.height + padding))

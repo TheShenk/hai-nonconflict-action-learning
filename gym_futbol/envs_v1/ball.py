@@ -1,3 +1,4 @@
+import pygame
 import pymunk
 from pymunk.vec2d import Vec2d
 
@@ -56,7 +57,8 @@ class Ball():
         body.velocity_func = limit_velocity
 
         shape = pymunk.Circle(body, radius)
-        shape.color = (0, 1, 0, 1)  # green, (R,G,B,A)
+        # shape.color = (0, 1, 0, 1)  # green, (R,G,B,A)
+        shape.color = pygame.Color("green")
         shape.elasticity = elasticity
         self.space.add(body, shape)
 
