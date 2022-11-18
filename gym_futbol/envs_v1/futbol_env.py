@@ -91,10 +91,10 @@ class Futbol(gym.Env):
         # [3] y velocity
         self.observation_space = spaces.Box(
             low=np.array([-1., -1., -1., -1.] *
-                         (1+self.number_of_player * 2), dtype=np.float32),
+                         (1+self.number_of_player * 2), dtype=np.float64),
             high=np.array([1., 1., 1., 1.] *
-                          (1+self.number_of_player * 2), dtype=np.float32),
-            dtype=np.float32)
+                          (1+self.number_of_player * 2), dtype=np.float64),
+            dtype=np.float64)
 
         # create space
         self.space = pymunk.Space()
