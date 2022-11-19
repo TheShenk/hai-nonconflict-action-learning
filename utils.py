@@ -1,29 +1,69 @@
 import pymunk
+import pymunk.pygame_util
+import pymunk.matplotlib_util
+
+import pygame
 from IPython import display
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 
-def visualize_matplotlib(env, reward):
-    padding = 5
+class BaseVisualizer:
 
-    plt.clf()
-    plt.title(f"Reward: {reward}", loc='left')
-    ax = plt.axes(xlim=(0 - padding, env.width + padding), ylim=(0 - padding, env.height + padding))
-    ax.set_aspect("equal")
+    def __init__(self, env):
+        self.env = env
 
-    draw_options = pymunk.matplotlib_util.DrawOptions(ax)
-    env.space.debug_draw(draw_options)
-    display.display(plt.gcf())
-    display.clear_output(wait=True)
+    def visualize(self, reward):
+        pass
+
+    def run(self, model):
+        ob = self.env.reset()
+        done = False
+        total_reward = 0
+        while not done:
+            action, _states = model.predict(ob)
+            ob, reward, done, info = self.env.step(action)
+            self.visualize(reward)
+            total_reward += reward
+        return total_reward
 
 
-def run_model(env, model, visualize):
-    ob = env.reset()
-    done = False
-    total_reward = 0
-    while not done:
-        action, _states = model.predict(ob)
-        ob, reward, done, info = env.step(action)
-        visualize(env, reward)
-        total_reward += reward
-    return total_reward
+class PygameVisualizer(BaseVisualizer):
+    def __init__(self, env, fps=60):
+        super().__init__(env)
+        pygame.init()
+        self.surface = pygame.display.set_mode((self.env.width, self.env.height))
+        self.clock = pygame.time.Clock()
+        self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
+        self.fps = fps
+
+    def visualize(self, reward):
+        self.surface.fill("black")
+        self.env.space.debug_draw(self.draw_options)
+        pygame.display.flip()
+        self.clock.tick(self.fps)
+
+    @staticmethod
+    def close():
+        pygame.quit()
+
+
+class MatplotlibVisualizer(BaseVisualizer):
+
+    def __init__(self, env):
+        super().__init__(env)
+
+    def visualize(self, reward):
+        padding = 5
+
+        plt.clf()
+        ax = plt.axes(
+            xlim=(0 - padding, self.env.width + padding),
+            ylim=(0 - padding, self.env.height + padding)
+        )
+        ax.set_aspect("equal")
+
+        draw_options = pymunk.matplotlib_util.DrawOptions(ax)
+        self.env.space.debug_draw(draw_options)
+        plt.title(f"Reward: {reward}", loc='left')
+        display.display(plt.gcf())
+        display.clear_output(wait=True)
