@@ -1,3 +1,7 @@
+from typing import List
+
+import gym
+import numpy as np
 import pymunk
 import pymunk.pygame_util
 import pymunk.matplotlib_util
@@ -5,6 +9,9 @@ import pymunk.matplotlib_util
 import pygame
 from IPython import display
 import matplotlib.pyplot as plt
+from gym import Wrapper, spaces
+from gym.spaces import Box
+from stable_baselines3.common.base_class import BaseAlgorithm
 
 
 class BaseVisualizer:
@@ -67,3 +74,50 @@ class MatplotlibVisualizer(BaseVisualizer):
         plt.title(f"Reward: {reward}", loc='left')
         display.display(plt.gcf())
         display.clear_output(wait=True)
+
+
+class ConstantEnv(gym.Env):
+
+    def __init__(self, observation, reward, done, info):
+        self.observation = observation
+        self.reward = reward
+        self.done = done
+        self.info = info
+
+    def step(self, action):
+        return self.reset()
+
+    def render(self, mode="human"):
+        pass
+
+    def reset(self):
+        return self.observation, self.reward, self.done, self.info
+
+
+class TransformAction(Wrapper):
+
+    def __init__(self, env, f, space):
+        super(TransformAction, self).__init__(env)
+        assert callable(f)
+        self.f = f
+        self.action_space = space
+
+    def action(self, action):
+        return self.f(action)
+
+
+class RandomStaticAgent:
+    def __init__(self, env: gym.Env):
+        self.env = env
+
+    def predict(self, *args, **kwargs):
+        return self.env.action_space.sample(), None
+
+
+class MultiModelAgent:
+    def __init__(self, models: List[BaseAlgorithm]):
+        self.models = models
+
+    def predict(self, *args, **kwargs):
+        actions = [model.predict(*args, **kwargs)[0] for model in self.models]
+        return np.concatenate(actions), None

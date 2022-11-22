@@ -82,7 +82,7 @@ class Futbol(gym.Env):
         # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
         # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
         self.action_space = spaces.MultiDiscrete(
-            [5, 5] * self.number_of_player)
+            [5, 5] * self.number_of_player * 2)
 
         # observation space (normalized)
         # [0] x position
@@ -433,25 +433,17 @@ class Futbol(gym.Env):
     # action space
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
-    def step(self, left_player_action):
+    def step(self, players_action):
 
-        right_player_action = np.reshape(self.random_action(), (-1, 2))
+        action_arr = np.reshape(players_action, (-1, 2))
 
-        left_player_action = np.reshape(left_player_action, (-1, 2))
-
-        init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
+        team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
+        team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)
 
         ball_init = self.ball.get_position()
 
         done = False
-        reward = 0
-
-        # print(right_player_action)
-        # print(left_player_action)
-
-        action_arr = np.concatenate((left_player_action, right_player_action))
-
-        # print(action_arr)
+        reward = [0, 0]
 
         for player, action in zip(self.player_arr, action_arr):
             self._process_action(player, action)
@@ -472,14 +464,20 @@ class Futbol(gym.Env):
         if not out:
             ball_after = self.ball.get_position()
 
-            reward += self.get_team_reward(init_distance_arr, self.team_A)
-            reward += self.get_ball_reward(ball_init, ball_after)
+            reward[0] += self.get_team_reward(team_A_init_distance_arr, self.team_A)
+            reward[1] += self.get_team_reward(team_A_init_distance_arr, self.team_A)
+
+            reward[0] += self.get_ball_reward(ball_init, ball_after, [self.width, self.height/2])
+            reward[1] += self.get_ball_reward(ball_init, ball_after, [0, self.height/2])
 
         if self.ball_contact_goal():
             bx, _ = self.ball.get_position()
 
             goal_reward = 1000
-            reward += goal_reward if bx > self.width - 2 else -goal_reward
+
+            reward[0] += goal_reward if bx > self.width - 2 else -goal_reward
+            reward[1] += -goal_reward if bx > self.width - 2 else goal_reward
+
             self._position_to_initial()
             self.ball_owner_side = random.choice(["left", "right"])
             # done = True
@@ -489,7 +487,7 @@ class Futbol(gym.Env):
         if self.current_time > self.total_time:
             done = True
 
-        return self.observation, reward, done, {}
+        return self.observation, reward[0], done, {}
 
     def _ball_to_team_distance_arr(self, team):
         distance_arr = []
@@ -512,11 +510,9 @@ class Futbol(gym.Env):
         else:
             return np.max(difference_arr) * run_to_ball_reward_coefficient
 
-    def get_ball_reward(self, ball_init, ball_after):
+    def get_ball_reward(self, ball_init, ball_after, goal):
 
         ball_to_goal_reward_coefficient = 10
-
-        goal = [self.width, self.height/2]
 
         _, ball_a_to_goal = get_vec(ball_after, goal)
         _, ball_i_to_goal = get_vec(ball_init, goal)
