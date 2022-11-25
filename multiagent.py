@@ -11,7 +11,7 @@ import numpy as np
 from stable_baselines3.common.utils import obs_as_tensor
 
 
-class MultiAgentModelProxy:
+class MultiAgentOnPolicyProxy:
     def __init__(self, model: Union[OnPolicyAlgorithm, OffPolicyAlgorithm]):
         self.model = model
 
