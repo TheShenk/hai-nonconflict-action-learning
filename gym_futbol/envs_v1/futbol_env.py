@@ -68,7 +68,8 @@ class Futbol(gym.Env):
     def __init__(self, width=WIDTH, height=HEIGHT,
                  player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=utils.RandomStaticAgent):
+                 number_of_player=NUMBER_OF_PLAYER, team_B_model=utils.RandomStaticAgent,
+                 action_space_type="multi-discrete"):
         self.width = width
         self.height = height
         self.player_radius = player_radius
@@ -82,8 +83,15 @@ class Futbol(gym.Env):
         # action space
         # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
         # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
-        self.action_space = spaces.MultiDiscrete(
-            [5, 5] * self.number_of_player)
+        self.action_space_type = action_space_type
+        if action_space_type == "discrete":
+            self.action_space = spaces.MultiDiscrete(
+                [25] * self.number_of_player)
+        elif action_space_type == "multi-discrete":
+            self.action_space = spaces.MultiDiscrete(
+                [5, 5] * self.number_of_player)
+        elif action_space_type == "box":
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4, 2), dtype=np.float64)
 
         # observation space (normalized)
         # [0] x position
@@ -318,6 +326,9 @@ class Futbol(gym.Env):
         return self.action_space.sample()
 
     def _process_action(self, player, action):
+        if self.action_space_type == "discrete":
+            action = [action // 5, action % 5]
+
         # Arrow Keys
         # Arrow Keys: NOOP
         if action[0] == 0:
@@ -437,7 +448,10 @@ class Futbol(gym.Env):
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
     def step(self, team_A_action):
         team_B_action, _ = self.team_B_model.predict(self.observation)
-        action_arr = np.reshape([*team_A_action, *team_B_action], (-1, 2))
+        if self.action_space_type == "multi-discrete":
+            action_arr = np.reshape([*team_A_action, *team_B_action], (-1, 2))
+        elif self.action_space_type == "discrete":
+            action_arr = np.reshape([*team_A_action, *team_B_action], (1, -1))[0]
 
         team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
         team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)
