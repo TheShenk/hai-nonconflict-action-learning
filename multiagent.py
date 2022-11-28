@@ -9,7 +9,7 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, TrainFr
 
 import torch as th
 import numpy as np
-from stable_baselines3.common.utils import obs_as_tensor
+from stable_baselines3.common.utils import obs_as_tensor, should_collect_more_steps
 from stable_baselines3.common.vec_env import VecEnv
 
 
@@ -65,6 +65,7 @@ class MultiAgentOnPolicyProxy:
 
         self.model.num_timesteps += self.model.env.num_envs
         self.model._update_info_buffer(infos)
+        self.n_steps += 1
 
         # Handle timeout by bootstraping with value function
         # see GitHub issue #633
@@ -95,7 +96,7 @@ class MultiAgentOnPolicyProxy:
         # Switch to eval mode (this affects batch norm / dropout)
         self.model.policy.set_training_mode(False)
 
-        n_steps = 0
+        self.n_steps = 0
         self.model.rollout_buffer.reset()
         # Sample new weights for the state dependent exploration
         if self.model.use_sde:
@@ -108,6 +109,9 @@ class MultiAgentOnPolicyProxy:
 
         self.model.rollout_buffer.compute_returns_and_advantage(last_values=values,
                                                                 dones=self.model._last_episode_starts)
+
+    def continue_record(self):
+        return n_steps < self.model.n_rollout_steps
 
 
 class MultiAgentOffPolicyProxy:
@@ -219,6 +223,9 @@ class MultiAgentOffPolicyProxy:
         self.rollout = RolloutReturn(self.num_collected_steps * self.model.env.num_envs, self.num_collected_episodes,
                                      True)
 
+    def continue_record(self):
+        return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
+
 
 def multiagent_learn(models: List[Union[MultiAgentOffPolicyProxy, MultiAgentOffPolicyProxy]], timesteps, env,
                      n_records_count, model_save_path):
@@ -235,7 +242,7 @@ def multiagent_learn(models: List[Union[MultiAgentOffPolicyProxy, MultiAgentOffP
         for model in models:
             model.start_record()
 
-        for step in range(n_records_count):
+        while any([model.continue_record() for model in models]):
             sample_actions_results = [model.sample_action() for model in models]
             actions = list(map(lambda x: x[0], sample_actions_results))
             total_action = np.reshape(actions, (1, -1))
