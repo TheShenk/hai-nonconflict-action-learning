@@ -11,6 +11,49 @@ import numpy as np
 from stable_baselines3.common.utils import obs_as_tensor
 
 
+def multiagent_learn(models, timesteps, env, n_records_count, model_save_path):
+    for model in models:
+        model.start_learning(timesteps)
+
+    observation = env.reset()
+    total_reward = 0
+    max_step_reward = 0
+    time = 0
+    while time < timesteps:
+        current_step_reward = 0
+
+        for model in models:
+            model.start_record()
+
+        for step in range(n_records_count):
+            actions = [model.predict(observation)[0] for model in models]
+            total_action = np.concatenate(np.concatenate(actions))
+            time += env.num_envs
+
+            next_observation, reward, done, info = env.step(np.array([total_action]))
+            total_reward += reward
+            current_step_reward += reward
+
+            for model, action in zip(models, actions):
+                model.record(observation, action, next_observation, reward, done, info)
+
+            observation = next_observation
+
+        for model in models:
+            model.end_record()
+            model.train()
+
+        print(time, current_step_reward)
+
+        if current_step_reward > max_step_reward:
+            max_step_reward = current_step_reward
+            for index, model in enumerate(models):
+                model.model.save(f"{model_save_path}-best-{index}")
+
+    for index, model in enumerate(models):
+        model.model.save(f"{model_save_path}-last-{index}")
+
+
 class MultiAgentOnPolicyProxy:
     def __init__(self, model: Union[OnPolicyAlgorithm, OffPolicyAlgorithm]):
         self.model = model
