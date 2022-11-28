@@ -96,14 +96,9 @@ class ConstantEnv(gym.Env):
 
 class TransformAction(Wrapper):
 
-    def __init__(self, env, f, space):
+    def __init__(self, env, space):
         super(TransformAction, self).__init__(env)
-        assert callable(f)
-        self.f = f
         self.action_space = space
-
-    def action(self, action):
-        return self.f(action)
 
 
 class RandomStaticAgent:

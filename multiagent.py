@@ -1,7 +1,6 @@
 from typing import Optional, Union, List
 
 import gym
-from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.noise import VectorizedActionNoise
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
@@ -111,7 +110,7 @@ class MultiAgentOnPolicyProxy:
                                                                 dones=self.model._last_episode_starts)
 
     def continue_record(self):
-        return n_steps < self.model.n_rollout_steps
+        return self.n_steps < self.model.n_steps
 
 
 class MultiAgentOffPolicyProxy:
@@ -198,7 +197,7 @@ class MultiAgentOffPolicyProxy:
             gradient_steps = self.model.gradient_steps if self.model.gradient_steps >= 0 else self.rollout.episode_timesteps
             # Special case when the user passes `gradient_steps=0`
             if gradient_steps > 0:
-                return self.train(batch_size=self.batch_size, gradient_steps=gradient_steps)
+                return self.train(batch_size=self.model.batch_size, gradient_steps=gradient_steps)
 
     def start_record(self):
         self.model.policy.set_training_mode(False)
@@ -227,8 +226,8 @@ class MultiAgentOffPolicyProxy:
         return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
 
 
-def multiagent_learn(models: List[Union[MultiAgentOffPolicyProxy, MultiAgentOffPolicyProxy]], timesteps, env,
-                     n_records_count, model_save_path):
+def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]], timesteps, env,
+                     model_save_path):
     for model in models:
         model.start_learning(timesteps)
 
