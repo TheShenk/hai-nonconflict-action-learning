@@ -451,7 +451,7 @@ class Futbol(gym.Env):
         if self.action_space_type == "multi-discrete":
             action_arr = np.reshape([*team_A_action, *team_B_action], (-1, 2))
         elif self.action_space_type == "discrete":
-            action_arr = np.reshape([*team_A_action, *team_B_action], (1, -1))[0]
+            action_arr = np.ravel([*team_A_action, *team_B_action])
 
         team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
         team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)
