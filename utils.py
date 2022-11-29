@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import List
 
 import gym
@@ -9,8 +10,7 @@ import pymunk.matplotlib_util
 import pygame
 from IPython import display
 import matplotlib.pyplot as plt
-from gym import Wrapper, spaces
-from gym.spaces import Box
+from gym import Wrapper
 from stable_baselines3.common.base_class import BaseAlgorithm
 
 
@@ -19,6 +19,7 @@ class BaseVisualizer:
     def __init__(self, env):
         self.env = env
 
+    @abstractmethod
     def visualize(self, reward):
         pass
 
@@ -35,12 +36,18 @@ class BaseVisualizer:
 
 
 class PygameVisualizer(BaseVisualizer):
-    def __init__(self, env, fps=60):
+    def __init__(self, env, res, fps=60):
         super().__init__(env)
         pygame.init()
-        self.surface = pygame.display.set_mode((self.env.width, self.env.height))
+        self.surface = pygame.display.set_mode(res)
         self.clock = pygame.time.Clock()
+
+        translation = (4, 2)
+        scale_factor = min(res[0] / (env.width + translation[0] * 2), res[1] / (env.height + translation[1] * 2))
+        print(res, env.width + 4, env.height, scale_factor)
         self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
+        self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
+            translation[0], translation[1])
         self.fps = fps
 
     def visualize(self, reward):
