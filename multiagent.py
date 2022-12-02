@@ -197,7 +197,7 @@ class MultiAgentOffPolicyProxy:
             gradient_steps = self.model.gradient_steps if self.model.gradient_steps >= 0 else self.rollout.episode_timesteps
             # Special case when the user passes `gradient_steps=0`
             if gradient_steps > 0:
-                return self.train(batch_size=self.model.batch_size, gradient_steps=gradient_steps)
+                return self.model.train(batch_size=self.model.batch_size, gradient_steps=gradient_steps)
 
     def start_record(self):
         self.model.policy.set_training_mode(False)
