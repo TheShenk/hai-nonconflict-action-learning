@@ -91,7 +91,7 @@ class Futbol(gym.Env):
             self.action_space = spaces.MultiDiscrete(
                 [5, 5] * self.number_of_player)
         elif action_space_type == "box":
-            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(4, 2), dtype=np.float64)
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4), dtype=np.float64)
 
         # observation space (normalized)
         # [0] x position
@@ -325,12 +325,20 @@ class Futbol(gym.Env):
     def random_action(self):
         return self.action_space.sample()
 
-    def _process_action(self, player, action):
+    def _process_box_action(self, player, action):
+        player.apply_force_to_player(PLAYER_FORCE_LIMIT * action[0],
+                                     PLAYER_FORCE_LIMIT * action[1])
+        if self.ball.has_contact_with(player):
+            self.ball.apply_force_to_ball(BALL_FORCE_LIMIT*action[2],
+                                          BALL_FORCE_LIMIT*action[3])
+
+    def _process_discrete_action(self, player, action):
         if self.action_space_type == "discrete":
             action = [action // 5, action % 5]
 
         # Arrow Keys
         # Arrow Keys: NOOP
+        force_x, force_y = 0, 0
         if action[0] == 0:
             force_x, force_y = 0, 0
         # Arrow Keys: UP
@@ -443,6 +451,13 @@ class Futbol(gym.Env):
         else:
             print("invalid action key")
 
+    def _process_action(self, player, action):
+        if self.action_space_type == "discrete" or self.action_space_type == "multi-discrete":
+            self._process_discrete_action(player, action)
+        else:
+            self._process_box_action(player, action)
+
+
     # action space
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
@@ -452,6 +467,9 @@ class Futbol(gym.Env):
             action_arr = np.reshape([*team_A_action, *team_B_action], (-1, 2))
         elif self.action_space_type == "discrete":
             action_arr = np.ravel([*team_A_action, *team_B_action])
+        elif self.action_space_type == "box":
+            team_A_action = np.reshape(team_A_action, (self.number_of_player, 4))
+            action_arr = [*team_A_action, *team_B_action]
 
         team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
         team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)

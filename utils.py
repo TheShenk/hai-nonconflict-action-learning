@@ -116,6 +116,14 @@ class RandomStaticAgent:
         return self.env.action_space.sample(), None
 
 
+class TestStaticAgent:
+    def __init__(self, env: gym.Env):
+        self.env = env
+
+    def predict(self, *args, **kwargs):
+        return np.array([[-1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]), None
+
+
 class MultiModelAgent:
     def __init__(self, models: List[BaseAlgorithm]):
         self.models = models
