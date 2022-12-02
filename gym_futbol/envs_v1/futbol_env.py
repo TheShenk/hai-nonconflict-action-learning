@@ -91,7 +91,7 @@ class Futbol(gym.Env):
             self.action_space = spaces.MultiDiscrete(
                 [5, 5] * self.number_of_player)
         elif action_space_type == "box":
-            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4), dtype=np.float64)
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4))
 
         # observation space (normalized)
         # [0] x position
