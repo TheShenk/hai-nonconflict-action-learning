@@ -1,3 +1,5 @@
+import sys
+import time
 from typing import Optional, Union, List
 
 import gym
@@ -8,12 +10,13 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, TrainFr
 
 import torch as th
 import numpy as np
-from stable_baselines3.common.utils import obs_as_tensor, should_collect_more_steps
+from stable_baselines3.common.utils import obs_as_tensor, should_collect_more_steps, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 
 
 class MultiAgentOnPolicyProxy:
     def __init__(self, model: OnPolicyAlgorithm):
+        self.iteration = 0
         self.model = model
 
     def sample_action(self):
@@ -88,6 +91,21 @@ class MultiAgentOnPolicyProxy:
         return self.model.predict(*args, **kwargs)
 
     def train(self, *args, **kwargs):
+        self.iteration += 1
+        log_interval = 1
+        # Display training infos
+        if log_interval is not None and self.iteration % log_interval == 0:
+            time_elapsed = max((time.time_ns() - self.model.start_time) / 1e9, sys.float_info.epsilon)
+            fps = int((self.model.num_timesteps - self.model._num_timesteps_at_start) / time_elapsed)
+            self.model.logger.record("time/iterations", self.iteration, exclude="tensorboard")
+            if len(self.model.ep_info_buffer) > 0 and len(self.model.ep_info_buffer[0]) > 0:
+                self.model.logger.record("rollout/ep_rew_mean", safe_mean([ep_info["r"] for ep_info in self.model.ep_info_buffer]))
+                self.model.logger.record("rollout/ep_len_mean", safe_mean([ep_info["l"] for ep_info in self.model.ep_info_buffer]))
+            self.model.logger.record("time/fps", fps)
+            self.model.logger.record("time/time_elapsed", int(time_elapsed), exclude="tensorboard")
+            self.model.logger.record("time/total_timesteps", self.model.num_timesteps, exclude="tensorboard")
+            self.model.logger.dump(step=self.model.num_timesteps)
+
         return self.model.train(*args, **kwargs)
 
     def start_record(self):
