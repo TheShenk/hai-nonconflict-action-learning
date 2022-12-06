@@ -290,3 +290,6 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
 
     for index, model in enumerate(models):
         model.model.save(f"{model_save_path}-last-{index}")
+
+    print("Total reward:", total_reward)
+    print("Average reward:", total_reward/timesteps)

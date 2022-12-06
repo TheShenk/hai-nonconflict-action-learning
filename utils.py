@@ -32,6 +32,7 @@ class BaseVisualizer:
             ob, reward, done, info = self.env.step(action)
             self.visualize(reward)
             total_reward += reward
+        print("Total reward: ", total_reward)
         return total_reward
 
 
@@ -44,7 +45,6 @@ class PygameVisualizer(BaseVisualizer):
 
         translation = (4, 2)
         scale_factor = min(res[0] / (env.width + translation[0] * 2), res[1] / (env.height + translation[1] * 2))
-        print(res, env.width + 4, env.height, scale_factor)
         self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
         self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
             translation[0], translation[1])
