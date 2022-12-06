@@ -16,6 +16,7 @@ from stable_baselines3.common.vec_env import VecEnv
 
 class MultiAgentOnPolicyProxy:
     def __init__(self, model: OnPolicyAlgorithm):
+        self.n_steps = 0
         self.iteration = 0
         self.model = model
 
@@ -261,8 +262,9 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
 
         while any([model.continue_record() for model in models]):
             sample_actions_results = [model.sample_action() for model in models]
-            actions = list(map(lambda x: x[0], sample_actions_results))
-            total_action = np.reshape(actions, (1, -1))
+            actions = tuple(map(lambda x: x[0], sample_actions_results))
+
+            total_action = np.concatenate(actions, axis=2)
             time += env.num_envs
 
             next_observation, reward, done, info = env.step(total_action)
@@ -280,8 +282,9 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
 
         print(time, current_step_reward)
 
-        if current_step_reward > max_step_reward:
-            max_step_reward = current_step_reward
+        max_current_step_reward = np.amax(current_step_reward)
+        if max_current_step_reward > max_step_reward:
+            max_step_reward = max_current_step_reward
             for index, model in enumerate(models):
                 model.model.save(f"{model_save_path}-best-{index}")
 

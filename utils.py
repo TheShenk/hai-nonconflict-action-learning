@@ -104,7 +104,7 @@ class ConstantEnv(gym.Env):
 class TransformAction(Wrapper):
 
     def __init__(self, env, space):
-        super(TransformAction, self).__init__(env)
+        super().__init__(env)
         self.action_space = space
 
 
