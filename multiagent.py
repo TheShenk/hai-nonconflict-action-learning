@@ -245,8 +245,9 @@ class MultiAgentOffPolicyProxy:
         return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
 
 
-def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]], timesteps, env,
-                     model_save_path):
+def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]], timesteps: int, env: GymEnv,
+                     model_save_path: str, action_combiner = lambda acts: np.concatenate(acts, axis=2)):
+
     for model in models:
         model.start_learning(timesteps)
 
@@ -263,8 +264,7 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
         while any([model.continue_record() for model in models]):
             sample_actions_results = [model.sample_action() for model in models]
             actions = tuple(map(lambda x: x[0], sample_actions_results))
-
-            total_action = np.concatenate(actions, axis=2)
+            total_action = action_combiner(actions)
             time += env.num_envs
 
             next_observation, reward, done, info = env.step(total_action)
