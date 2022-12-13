@@ -37,6 +37,13 @@ class BaseVisualizer:
         print("Total reward: ", total_reward)
         return total_reward
 
+class NoVisualizer(BaseVisualizer):
+
+    def __init__(self, env):
+        super().__init__(env)
+
+    def visualize(self, reward):
+        pass
 
 class PygameVisualizer(BaseVisualizer):
     def __init__(self, env, res, fps=60):

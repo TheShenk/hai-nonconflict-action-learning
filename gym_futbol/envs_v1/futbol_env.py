@@ -70,6 +70,7 @@ class Futbol(gym.Env):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete"):
+
         self.width = width
         self.height = height
         self.player_radius = player_radius
@@ -146,7 +147,8 @@ class Futbol(gym.Env):
                          radius=ball_radius,
                          elasticity=0.2)
 
-        self.observation = self.reset()
+        self.reset()
+        self.observation, self.inverse_osb = self._get_observation()
         self.team_B_model = team_B_model(self)
 
     def _position_to_initial(self):
@@ -164,13 +166,13 @@ class Futbol(gym.Env):
         # move to the target position
         self.space.step(0.0001)
 
-        self.observation = self._get_observation()
+        self.observation, self.inverse_osb = self._get_observation()
 
     def reset(self):
         self.current_time = 0
         self.ball_owner_side = random.choice(["left", "right"])
         self._position_to_initial()
-        return self._get_observation()
+        return self._get_observation()[0]
 
     # normalize ball observation
 
@@ -198,9 +200,13 @@ class Futbol(gym.Env):
             self.team_B.get_observation())
 
         obs = np.concatenate(
-            (ball_observation, team_A_observation, team_B_observation))
+            (ball_observation, team_A_observation, team_B_observation)
+        )
+        inverse_obs = -np.concatenate(
+            (ball_observation, team_B_observation, team_A_observation)
+        )
 
-        return obs
+        return obs, inverse_obs
 
     def _setup_walls(self, width, height):
         # Create walls.
@@ -473,7 +479,8 @@ class Futbol(gym.Env):
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
     def step(self, team_A_action):
-        team_B_action, _ = self.team_B_model.predict(self.observation)
+        team_B_action, _ = self.team_B_model.predict(self.inverse_osb)
+        if self.action_space_type[1] == "box": team_B_action *= -1
 
         team_A_action = self.map_action_to_players(team_A_action, self.action_space_type[0])
         team_B_action = self.map_action_to_players(team_B_action, self.action_space_type[1])
@@ -494,7 +501,7 @@ class Futbol(gym.Env):
 
         # step environment using pymunk
         self.space.step(TIME_STEP)
-        self.observation = self._get_observation()
+        self.observation, self.inverse_osb = self._get_observation()
 
         # get reward
         if not out:
