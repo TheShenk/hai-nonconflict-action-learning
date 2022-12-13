@@ -3,7 +3,7 @@ import pygame
 from gym import error, spaces
 from gym.utils import seeding
 
-import utils
+from agents.random_agent import RandomAgent
 from .player import Player
 from .ball import Ball
 from .team import Team
@@ -68,7 +68,7 @@ class Futbol(gym.Env):
     def __init__(self, width=WIDTH, height=HEIGHT,
                  player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=utils.RandomStaticAgent,
+                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete"):
         self.width = width
         self.height = height
@@ -83,14 +83,18 @@ class Futbol(gym.Env):
         # action space
         # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
         # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
-        self.action_space_type = action_space_type
-        if action_space_type == "discrete":
+        if isinstance(action_space_type, str):
+            self.action_space_type = [action_space_type, action_space_type]
+        else:
+            self.action_space_type = action_space_type
+
+        if self.action_space_type[0] == "discrete":
             self.action_space = spaces.MultiDiscrete(
                 [25] * self.number_of_player)
-        elif action_space_type == "multi-discrete":
+        elif self.action_space_type[0] == "multi-discrete":
             self.action_space = spaces.MultiDiscrete(
                 [5, 5] * self.number_of_player)
-        elif action_space_type == "box":
+        elif self.action_space_type[0] == "box":
             self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4))
 
         # observation space (normalized)
@@ -333,8 +337,6 @@ class Futbol(gym.Env):
                                           BALL_FORCE_LIMIT*action[3])
 
     def _process_discrete_action(self, player, action):
-        if self.action_space_type == "discrete":
-            action = [action // 5, action % 5]
 
         # Arrow Keys
         # Arrow Keys: NOOP
@@ -451,25 +453,30 @@ class Futbol(gym.Env):
         else:
             print("invalid action key")
 
-    def _process_action(self, player, action):
-        if self.action_space_type == "discrete" or self.action_space_type == "multi-discrete":
+    def _process_action(self, player, action, action_space_type):
+        if action_space_type == "discrete":
+            self._process_discrete_action(player, [action // 5, action % 5])
+        elif action_space_type == "multi-discrete":
             self._process_discrete_action(player, action)
         else:
             self._process_box_action(player, action)
 
+    def map_action_to_players(self, actions, action_space_type):
+        if action_space_type == "multi-discrete":
+            return np.reshape(actions, (-1, 2))
+        elif action_space_type == "discrete":
+            return np.ravel(actions)
+        elif action_space_type == "box":
+            return np.reshape(actions, (self.number_of_player, 4))
 
     # action space
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
     def step(self, team_A_action):
         team_B_action, _ = self.team_B_model.predict(self.observation)
-        if self.action_space_type == "multi-discrete":
-            action_arr = np.reshape([*team_A_action, *team_B_action], (-1, 2))
-        elif self.action_space_type == "discrete":
-            action_arr = np.ravel([*team_A_action, *team_B_action])
-        elif self.action_space_type == "box":
-            team_A_action = np.reshape(team_A_action, (self.number_of_player, 4))
-            action_arr = [*team_A_action, *team_B_action]
+
+        team_A_action = self.map_action_to_players(team_A_action, self.action_space_type[0])
+        team_B_action = self.map_action_to_players(team_B_action, self.action_space_type[1])
 
         team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
         team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)
@@ -479,13 +486,8 @@ class Futbol(gym.Env):
         done = False
         reward = [0, 0]
 
-        for player, action in zip(self.player_arr, action_arr):
-            self._process_action(player, action)
-            # change ball owner if any contact
-            if self.ball.has_contact_with(player):
-                self.ball_owner_side = player.side
-            else:
-                pass
+        self._process_team_action(self.team_A.player_array, team_A_action, self.action_space_type[0])
+        self._process_team_action(self.team_B.player_array, team_B_action, self.action_space_type[1])
 
         # fix the out of bound situation
         out = self.check_and_fix_out_bounds()
@@ -523,6 +525,12 @@ class Futbol(gym.Env):
 
         return self.observation, reward[0], done, {}
 
+    def _process_team_action(self, team_players, team_actions, team_action_space_type):
+        for player, action in zip(team_players, team_actions):
+            self._process_action(player, action, team_action_space_type)
+            # change ball owner if any contact
+            if self.ball.has_contact_with(player):
+                self.ball_owner_side = player.side
     def _ball_to_team_distance_arr(self, team):
         distance_arr = []
         bx, by = self.ball.get_position()
@@ -552,3 +560,6 @@ class Futbol(gym.Env):
         _, ball_i_to_goal = get_vec(ball_init, goal)
 
         return (ball_i_to_goal - ball_a_to_goal) * ball_to_goal_reward_coefficient
+
+    def set_team_b_model(self, model):
+        self.team_B_model = model

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Union
 
 import gym
 import numpy as np
@@ -12,6 +12,8 @@ from IPython import display
 import matplotlib.pyplot as plt
 from gym import Wrapper
 from stable_baselines3.common.base_class import BaseAlgorithm
+
+from agents.base_agent import BaseAgent
 
 
 class BaseVisualizer:
@@ -108,14 +110,6 @@ class TransformAction(Wrapper):
         self.action_space = space
 
 
-class RandomStaticAgent:
-    def __init__(self, env: gym.Env):
-        self.env = env
-
-    def predict(self, *args, **kwargs):
-        return self.env.action_space.sample(), None
-
-
 class TestStaticAgent:
     def __init__(self, env: gym.Env):
         self.env = env
@@ -125,9 +119,12 @@ class TestStaticAgent:
 
 
 class MultiModelAgent:
-    def __init__(self, models: List[BaseAlgorithm]):
+    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]]):
         self.models = models
 
     def predict(self, *args, **kwargs):
-        actions = [model.predict(*args, **kwargs)[0] for model in self.models]
+        actions = np.array([model.predict(*args, **kwargs)[0] for model in self.models])
+
+        if actions.ndim == 1:
+            return actions, None
         return np.concatenate(actions), None
