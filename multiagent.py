@@ -12,6 +12,7 @@ import torch as th
 import numpy as np
 from stable_baselines3.common.utils import obs_as_tensor, should_collect_more_steps, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
+from tqdm import tqdm
 
 
 class MultiAgentOnPolicyProxy:
@@ -245,8 +246,11 @@ class MultiAgentOffPolicyProxy:
         return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
 
 
-def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]], timesteps: int, env: GymEnv,
-                     model_save_path: str, action_combiner = lambda acts: np.concatenate(acts, axis=2)):
+def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]],
+                     timesteps: int,
+                     env: GymEnv,
+                     model_save_path: Optional[str] = None,
+                     action_combiner = lambda acts: np.concatenate(acts, axis=2)):
 
     for model in models:
         model.start_learning(timesteps)
@@ -255,41 +259,43 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
     total_reward = 0
     max_step_reward = 0
     time = 0
-    while time < timesteps:
-        current_step_reward = 0
 
-        for model in models:
-            model.start_record()
+    with tqdm(total=timesteps) as pbar:
+        while time < timesteps:
+            current_step_reward = 0
 
-        while any([model.continue_record() for model in models]):
-            sample_actions_results = [model.sample_action() for model in models]
-            actions = tuple(map(lambda x: x[0], sample_actions_results))
-            total_action = action_combiner(actions)
-            time += env.num_envs
+            for model in models:
+                model.start_record()
 
-            next_observation, reward, done, info = env.step(total_action)
-            total_reward += reward
-            current_step_reward += reward
+            while any([model.continue_record() for model in models]):
+                sample_actions_results = [model.sample_action() for model in models]
+                actions = tuple(map(lambda x: x[0], sample_actions_results))
+                total_action = action_combiner(actions)
+                time += env.num_envs
+                pbar.update(env.num_envs)
 
-            for model, action, sample_actions_result in zip(models, actions, sample_actions_results):
-                model.record(observation, action, next_observation, reward, done, info, sample_actions_result)
+                next_observation, reward, done, info = env.step(total_action)
+                total_reward += reward
+                current_step_reward += reward
 
-            observation = next_observation
+                for model, action, sample_actions_result in zip(models, actions, sample_actions_results):
+                    model.record(observation, action, next_observation, reward, done, info, sample_actions_result)
 
-        for model in models:
-            model.end_record()
-            model.train()
+                observation = next_observation
 
-        print(time, current_step_reward)
+            for model in models:
+                model.end_record()
+                model.train()
 
-        max_current_step_reward = np.amax(current_step_reward)
-        if max_current_step_reward > max_step_reward:
-            max_step_reward = max_current_step_reward
-            for index, model in enumerate(models):
-                model.model.save(f"{model_save_path}-best-{index}")
+            max_current_step_reward = np.amax(current_step_reward)
+            if model_save_path and max_current_step_reward > max_step_reward:
+                max_step_reward = max_current_step_reward
+                for index, model in enumerate(models):
+                    model.model.save(f"{model_save_path}-best-{index}")
 
-    for index, model in enumerate(models):
-        model.model.save(f"{model_save_path}-last-{index}")
+    if model_save_path:
+        for index, model in enumerate(models):
+            model.model.save(f"{model_save_path}-last-{index}")
 
     print("Total reward:", total_reward)
     print("Average reward:", total_reward/timesteps)
