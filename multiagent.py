@@ -16,10 +16,13 @@ from tqdm import tqdm
 
 
 class MultiAgentOnPolicyProxy:
-    def __init__(self, model: OnPolicyAlgorithm):
+    def __init__(self,
+                 model: OnPolicyAlgorithm,
+                 tb_log_name: str = "OnPolicy"):
         self.n_steps = 0
         self.iteration = 0
-        self.model = model
+        self.model = model,
+        self.tb_log_name = tb_log_name
 
     def sample_action(self):
         with th.no_grad():
@@ -45,8 +48,7 @@ class MultiAgentOnPolicyProxy:
             n_eval_episodes: int = 5,
             eval_log_path: Optional[str] = None,
             reset_num_timesteps: bool = True,
-            tb_log_name: str = "run",
-            progress_bar: bool = False,
+            progress_bar: bool = False
     ):
         self.model._setup_learn(
             total_timesteps,
@@ -56,7 +58,7 @@ class MultiAgentOnPolicyProxy:
             n_eval_episodes,
             eval_log_path,
             reset_num_timesteps,
-            tb_log_name,
+            self.tb_log_name,
             progress_bar,
         )
 
@@ -135,10 +137,14 @@ class MultiAgentOnPolicyProxy:
 
 class MultiAgentOffPolicyProxy:
 
-    def __init__(self, model: OffPolicyAlgorithm, log_interval: Optional[int] = None):
+    def __init__(self,
+                 model: OffPolicyAlgorithm,
+                 log_interval: Optional[int] = None,
+                 tb_log_name: str = "OffPolicy"):
         self.rollout = None
         self.model = model
         self.log_interval = log_interval
+        self.tb_log_name = tb_log_name
 
     def sample_action(self):
         return self.model._sample_action(self.model.learning_starts, self.model.action_noise,
@@ -153,8 +159,7 @@ class MultiAgentOffPolicyProxy:
             n_eval_episodes: int = 5,
             eval_log_path: Optional[str] = None,
             reset_num_timesteps: bool = True,
-            tb_log_name: str = "run",
-            progress_bar: bool = False,
+            progress_bar: bool = False
     ):
         self.model._setup_learn(
             total_timesteps,
@@ -164,7 +169,7 @@ class MultiAgentOffPolicyProxy:
             n_eval_episodes,
             eval_log_path,
             reset_num_timesteps,
-            tb_log_name,
+            self.tb_log_name,
             progress_bar,
         )
 
@@ -291,11 +296,11 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
             if model_save_path and max_current_step_reward > max_step_reward:
                 max_step_reward = max_current_step_reward
                 for index, model in enumerate(models):
-                    model.model.save(f"{model_save_path}-best-{index}")
+                    model.model.save(f"{model_save_path}/best-{index}")
 
     if model_save_path:
         for index, model in enumerate(models):
-            model.model.save(f"{model_save_path}-last-{index}")
+            model.model.save(f"{model_save_path}/last-{index}")
 
     print("Total reward:", total_reward)
     print("Average reward:", total_reward/timesteps)
