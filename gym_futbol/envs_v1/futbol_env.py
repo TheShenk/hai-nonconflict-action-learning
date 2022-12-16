@@ -70,7 +70,7 @@ class Futbol(gym.Env):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete", random_position=False,
-                 use_nstd_rfunc=True):
+                 team_reward_coeff=10, ball_reward_coeff=10):
 
         self.width = width
         self.height = height
@@ -79,6 +79,9 @@ class Futbol(gym.Env):
         self.debug = debug
         self.number_of_player = number_of_player
         self.random_position = random_position
+
+        self.ball_to_goal_reward_coefficient = ball_reward_coeff
+        self.run_to_ball_reward_coefficient = team_reward_coeff
 
         self.PLAYER_avg_arr = np.tile(PLAYER_avg_arr, number_of_player)
         self.PLAYER_range_arr = np.tile(PLAYER_range_arr, number_of_player)
@@ -551,24 +554,19 @@ class Futbol(gym.Env):
     def get_team_reward(self, init_distance_arr, team):
 
         after_distance_arr = self._ball_to_team_distance_arr(team)
-
         difference_arr = init_distance_arr - after_distance_arr
 
-        run_to_ball_reward_coefficient = 10
-
         if self.number_of_player == 5:
-            return np.max([difference_arr[3], difference_arr[4]]) * run_to_ball_reward_coefficient
+            return np.max([difference_arr[3], difference_arr[4]]) * self.run_to_ball_reward_coefficient
         else:
-            return np.max(difference_arr) * run_to_ball_reward_coefficient
+            return np.max(difference_arr) * self.run_to_ball_reward_coefficient
 
     def get_ball_reward(self, ball_init, ball_after, goal):
-
-        ball_to_goal_reward_coefficient = 10
 
         _, ball_a_to_goal = get_vec(ball_after, goal)
         _, ball_i_to_goal = get_vec(ball_init, goal)
 
-        return (ball_i_to_goal - ball_a_to_goal) * ball_to_goal_reward_coefficient
+        return (ball_i_to_goal - ball_a_to_goal) * self.ball_to_goal_reward_coefficient
 
     def set_team_b_model(self, model):
         self.team_B_model = model
