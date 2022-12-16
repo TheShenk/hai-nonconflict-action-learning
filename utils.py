@@ -34,7 +34,6 @@ class BaseVisualizer:
             ob, reward, done, info = self.env.step(action)
             self.visualize(reward)
             total_reward += reward
-        print("Total reward: ", total_reward)
         return total_reward
 
 class NoVisualizer(BaseVisualizer):

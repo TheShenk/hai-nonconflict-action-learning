@@ -69,7 +69,8 @@ class Futbol(gym.Env):
                  player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
-                 action_space_type="multi-discrete"):
+                 action_space_type="multi-discrete", random_position=False,
+                 use_nstd_rfunc=True):
 
         self.width = width
         self.height = height
@@ -77,6 +78,7 @@ class Futbol(gym.Env):
         self.total_time = total_time
         self.debug = debug
         self.number_of_player = number_of_player
+        self.random_position = random_position
 
         self.PLAYER_avg_arr = np.tile(PLAYER_avg_arr, number_of_player)
         self.PLAYER_range_arr = np.tile(PLAYER_range_arr, number_of_player)
@@ -153,9 +155,9 @@ class Futbol(gym.Env):
 
     def _position_to_initial(self):
 
-        self.team_A.set_position_to_initial()
+        self.team_A.set_position_to_initial(self.random_position)
 
-        self.team_B.set_position_to_initial()
+        self.team_B.set_position_to_initial(self.random_position)
 
         self.ball.set_position(self.width * 0.5, self.height * 0.5)
 

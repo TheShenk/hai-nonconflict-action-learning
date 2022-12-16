@@ -112,9 +112,14 @@ class Team():
         else:
             print("unimplemented")
 
-    def set_position_to_initial(self):
+    def set_position_to_initial(self, random_position):
         for player, x, y in zip(self.player_array, self.x_pos_array, self.y_pos_array):
-            player.set_position(x, y)
+            random_delta = [
+                random.uniform(-0.1, 0.1) * self.height,
+                random.uniform(-0.1, 0.1) * self.width
+            ] if random_position else [0, 0]
+
+            player.set_position(x+random_delta[0], y+random_delta[1])
             # zero velocity
             player.body.velocity = 0, 0
 
