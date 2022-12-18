@@ -103,8 +103,10 @@ class MultiAgentOnPolicyProxy:
             fps = int((self.model.num_timesteps - self.model._num_timesteps_at_start) / time_elapsed)
             self.model.logger.record("time/iterations", self.iteration, exclude="tensorboard")
             if len(self.model.ep_info_buffer) > 0 and len(self.model.ep_info_buffer[0]) > 0:
-                self.model.logger.record("rollout/ep_rew_mean", safe_mean([ep_info["r"] for ep_info in self.model.ep_info_buffer]))
-                self.model.logger.record("rollout/ep_len_mean", safe_mean([ep_info["l"] for ep_info in self.model.ep_info_buffer]))
+                self.model.logger.record("rollout/ep_rew_mean",
+                                         safe_mean([ep_info["r"] for ep_info in self.model.ep_info_buffer]))
+                self.model.logger.record("rollout/ep_len_mean",
+                                         safe_mean([ep_info["l"] for ep_info in self.model.ep_info_buffer]))
             self.model.logger.record("time/fps", fps)
             self.model.logger.record("time/time_elapsed", int(time_elapsed), exclude="tensorboard")
             self.model.logger.record("time/total_timesteps", self.model.num_timesteps, exclude="tensorboard")
@@ -141,6 +143,7 @@ class MultiAgentOffPolicyProxy:
                  model: OffPolicyAlgorithm,
                  log_interval: Optional[int] = None,
                  tb_log_name: str = "OffPolicy"):
+        self.num_collected_steps = 0
         self.rollout = None
         self.model = model
         self.log_interval = log_interval
@@ -253,10 +256,9 @@ class MultiAgentOffPolicyProxy:
 
 def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]],
                      timesteps: int,
-                     env: GymEnv,
+                     env: VecEnv,
                      model_save_path: Optional[str] = None,
-                     action_combiner = lambda acts: np.concatenate(acts, axis=2)):
-
+                     action_combiner=lambda acts: np.concatenate(acts, axis=2)):
     for model in models:
         model.start_learning(timesteps)
 
@@ -303,4 +305,4 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
             model.model.save(f"{model_save_path}/last-{index}")
 
     print("Total reward:", total_reward)
-    print("Average reward:", total_reward/timesteps)
+    print("Average reward:", total_reward / timesteps)
