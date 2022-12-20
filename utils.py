@@ -134,3 +134,14 @@ class MultiModelAgent:
         if actions.ndim == 1:
             return actions, None
         return np.concatenate(actions), None
+
+
+def plot_eval_results(eval_log_dir: str):
+    data = np.load(f'{eval_log_dir}/evaluations.npz')
+    average_results = np.average(data['results'], axis=1)
+    plt.figure("Evaluations", figsize=(8, 2))
+    plt.plot(data['timesteps'], average_results)
+    plt.ylabel("Episode Rewards")
+    plt.xlabel("Evaluation timesteps")
+    plt.ticklabel_format(style='plain')
+    plt.tight_layout()

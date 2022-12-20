@@ -21,7 +21,7 @@ class MultiAgentOnPolicyProxy:
                  tb_log_name: str = "OnPolicy"):
         self.n_steps = 0
         self.iteration = 0
-        self.model = model,
+        self.model = model
         self.tb_log_name = tb_log_name
 
     def sample_action(self):
