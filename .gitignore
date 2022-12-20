@@ -133,3 +133,6 @@ dmypy.json
 logs/
 tensorboard/
 models/
+/optuna-results/
+/self-play/
+/self-play-tmp/
