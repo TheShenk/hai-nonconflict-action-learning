@@ -123,17 +123,29 @@ class TestStaticAgent:
     def predict(self, *args, **kwargs):
         return np.array([[-1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]), None
 
+# Здесь представлены функции для объединения действий от разных агентов в общее
+# Самый простой - для случая, когда не используются векторные среды. В таком случае для всех видов пространств
+# действий можем просто соединить действия
+NON_VEC_COMBINER = lambda acts: np.concatenate(acts)
+# Обработка случая, когда модели используют дискретное пространство действий. В таком случае actions - уже
+# массив чисел, который нужно вернуть. Concatenate для него вызовет ошибку.
+NON_VEC_DISCRETE_COMBINER = lambda acts: acts
+# Для случая, когда используется непрерывное пространство. Необходимо перевести (Число агентов, Число сред, 1, y)
+# в (Число сред, Число Агентов, y)
+BOX_COMBINER = lambda acts: np.concatenate(acts, axis=2)
+# Для случая дискретных пространств. Переводит (Число агентов, Число сред, 1) в (Число сред, Число агентов, 1)
+DISCRETE_COMBINER = lambda acts: np.array(acts).transpose()
+#TODO: Понять как работает мульти-дискретный случай
+MULTI_DISCRETE_COMBINER = lambda acts: np.concatenate(acts, axis=1)
 
 class MultiModelAgent:
-    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]]):
+    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]], actions_combiner=NON_VEC_COMBINER):
         self.models = models
+        self.actions_combiner = actions_combiner
 
     def predict(self, *args, **kwargs):
         actions = np.array([model.predict(*args, **kwargs)[0] for model in self.models])
-
-        if actions.ndim == 1:
-            return actions, None
-        return np.concatenate(actions), None
+        return self.actions_combiner(actions), None
 
 
 def plot_eval_results(eval_log_dir: str):
