@@ -47,17 +47,9 @@ BALL_avg_arr = (BALL_max_arr + BALL_min_arr) / 2
 BALL_range_arr = (BALL_max_arr - BALL_min_arr) / 2
 
 padding = 3
-PLAYER_max_arr = np.array(
-    [WIDTH + padding, HEIGHT, PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY])
-PLAYER_min_arr = np.array(
-    [0 - padding, 0, -PLAYER_MAX_VELOCITY, -PLAYER_MAX_VELOCITY])
-PLAYER_avg_arr = (PLAYER_max_arr + PLAYER_min_arr) / 2
-PLAYER_range_arr = (PLAYER_max_arr - PLAYER_min_arr) / 2
 
 # get the vector pointing from [coor2] to [coor1] and
 # its magnitude
-
-
 def get_vec(coor_t, coor_o):
     vec = [coor_t[0] - coor_o[0], coor_t[1] - coor_o[1]]
     vec_mag = math.sqrt(vec[0]**2 + vec[1]**2)
@@ -70,7 +62,7 @@ class Futbol(gym.Env):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10):
+                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0):
 
         self.width = width
         self.height = height
@@ -79,9 +71,17 @@ class Futbol(gym.Env):
         self.debug = debug
         self.number_of_player = number_of_player
         self.random_position = random_position
+        self.message_dims_number = message_dims_number
 
         self.ball_to_goal_reward_coefficient = ball_reward_coeff
         self.run_to_ball_reward_coefficient = team_reward_coeff
+
+        PLAYER_max_arr = np.array(
+            [WIDTH + padding, HEIGHT, PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY] + [1, ] * self.message_dims_number)
+        PLAYER_min_arr = np.array(
+            [0 - padding, 0, -PLAYER_MAX_VELOCITY, -PLAYER_MAX_VELOCITY] + [-1, ] * self.message_dims_number)
+        PLAYER_avg_arr = (PLAYER_max_arr + PLAYER_min_arr) / 2
+        PLAYER_range_arr = (PLAYER_max_arr - PLAYER_min_arr) / 2
 
         self.PLAYER_avg_arr = np.tile(PLAYER_avg_arr, number_of_player)
         self.PLAYER_range_arr = np.tile(PLAYER_range_arr, number_of_player)
@@ -101,7 +101,7 @@ class Futbol(gym.Env):
             self.action_space = spaces.MultiDiscrete(
                 [5, 5] * self.number_of_player)
         elif self.action_space_type[0] == "box":
-            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4))
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4 + message_dims_number))
 
         # observation space (normalized)
         # [0] x position
@@ -109,11 +109,11 @@ class Futbol(gym.Env):
         # [2] x velocity
         # [3] y velocity
         self.observation_space = spaces.Box(
-            low=np.array([-1., -1., -1., -1.] *
-                         (1+self.number_of_player * 2), dtype=np.float64),
-            high=np.array([1., 1., 1., 1.] *
-                          (1+self.number_of_player * 2), dtype=np.float64),
-            dtype=np.float64)
+            low=-1.0,
+            high=1.0,
+            shape=((1 + message_dims_number + self.number_of_player * 2) * 4,),
+            dtype=np.float64
+        )
 
         # create space
         self.space = pymunk.Space()
@@ -133,7 +133,8 @@ class Futbol(gym.Env):
                            player_max_velocity=PLAYER_MAX_VELOCITY,
                            color=pygame.Color("red"),  # red
                            side="left",
-                           player_number=self.number_of_player)
+                           player_number=self.number_of_player,
+                           message_dims_number=self.message_dims_number)
 
         self.team_B = Team(self.space, width, height,
                            player_radius=self.player_radius,
@@ -141,7 +142,8 @@ class Futbol(gym.Env):
                            player_max_velocity=PLAYER_MAX_VELOCITY,
                            color=pygame.Color("blue"),  # blue
                            side="right",
-                           player_number=self.number_of_player)
+                           player_number=self.number_of_player,
+                           message_dims_number=self.message_dims_number)
 
         self.player_arr = self.team_A.player_array + self.team_B.player_array
 
@@ -343,6 +345,8 @@ class Futbol(gym.Env):
     def _process_box_action(self, player, action):
         player.apply_force_to_player(PLAYER_FORCE_LIMIT * action[0],
                                      PLAYER_FORCE_LIMIT * action[1])
+        if self.message_dims_number:
+            player.set_message(action[4:])
         if self.ball.has_contact_with(player):
             self.ball.apply_force_to_ball(BALL_FORCE_LIMIT*action[2],
                                           BALL_FORCE_LIMIT*action[3])
@@ -478,7 +482,7 @@ class Futbol(gym.Env):
         elif action_space_type == "discrete":
             return np.ravel(actions)
         elif action_space_type == "box":
-            return np.reshape(actions, (self.number_of_player, 4))
+            return np.reshape(actions, (self.number_of_player, 4+self.message_dims_number))
 
     # action space
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4

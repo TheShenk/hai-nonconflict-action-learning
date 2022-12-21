@@ -1,3 +1,4 @@
+import numpy as np
 import pymunk
 from pymunk.vec2d import Vec2d
 
@@ -5,10 +6,12 @@ from pymunk.vec2d import Vec2d
 class Player():
 
     def __init__(self, space, x, y, mass=70, radius=1.5, max_velocity=10,
-                 elasticity=0.2, color=(1, 0, 0, 1), side="left"):
+                 elasticity=0.2, color=(1, 0, 0, 1), message_dims_number=0, side="left"):
+        self.color_dims_number = message_dims_number
         self.space = space
         self.max_velocity = max_velocity
         self.color = color
+        self.message = np.zeros(message_dims_number)
         self.side = side
         self.body, self.shape = self._setup_player(
             space, x, y, mass, radius, elasticity)
@@ -21,13 +24,22 @@ class Player():
         vx, vy = self.body.velocity
         return [vx, vy]
 
+    def get_message(self):
+        return self.message.tolist()
+
     def get_observation(self):
-        return self.get_position() + self.get_velocity()
+        if self.color_dims_number:
+            return self.get_position() + self.get_velocity() + self.get_message()
+        else:
+            return self.get_position() + self.get_velocity()
 
     def set_position(self, x, y):
         self.body.position = x, y
 
-    # apply force on the center of the player
+    def set_message(self, message):
+        self.message = message
+
+    # apply force in the center of the player
     # fx: force in x direction
     # fy: force in y direction
 

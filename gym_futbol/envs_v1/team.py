@@ -9,7 +9,7 @@ class Team():
 
     def __init__(self, space, width, height, player_radius, player_weight,
                  player_max_velocity, color=(1, 0, 0, 1), side="left",
-                 player_number=2, elasiticity=0.2):
+                 player_number=2, elasiticity=0.2, message_dims_number=0):
         self.space = space
         self.width = width
         self.height = height
@@ -29,7 +29,8 @@ class Team():
                        color=c,
                        max_velocity=player_max_velocity,
                        elasticity=elasiticity,
-                       side=side))
+                       side=side,
+                       message_dims_number=message_dims_number))
 
     # only implemented with red and blue
     def _create_color_array(self, color, player_number):

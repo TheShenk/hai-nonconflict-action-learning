@@ -3,15 +3,18 @@ import numpy as np
 
 from agents.base_agent import BaseAgent
 
+
 class SimpleAttackingAgent(BaseAgent):
 
     def __init__(self, env: gym.Env,
                  player_index: int,
-                 player_obs_len: int = 4):
+                 player_obs_len: int = 4,
+                 message_dims_number: int = 0):
         super().__init__(env=env)
         self.player_index = player_index
         self.player_obs_len = player_obs_len
         self.enemy_goal_position = np.array([1, 0])
+        self.message_dims_number = message_dims_number
 
     def predict(self, observation):
         ball_position = observation[:2]
@@ -28,4 +31,7 @@ class SimpleAttackingAgent(BaseAgent):
         ball_enemy_goal_vector = self.enemy_goal_position - ball_position
         ball_enemy_goal_distance = np.linalg.norm(ball_enemy_goal_vector)
 
-        return [np.append(to_ball_vector / to_ball_distance, ball_enemy_goal_vector / ball_enemy_goal_distance)], None
+        return [np.append(np.append(
+            to_ball_vector / to_ball_distance,
+            ball_enemy_goal_vector / ball_enemy_goal_distance
+        ), [0, ] * self.message_dims_number)], None

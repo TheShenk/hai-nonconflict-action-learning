@@ -6,12 +6,14 @@ class SimpleGoalkeeperAgent(BaseAgent):
 
     def __init__(self, env: gym.Env,
                  player_index: int,
-                 player_obs_len: int = 4):
+                 player_obs_len: int = 4,
+                 message_dims_number: int = 0):
         super().__init__(env=env)
         self.player_index = player_index
         self.player_obs_len = player_obs_len
         self.goal_position = np.array([-0.8, 0])
         self.enemy_goal_position = np.array([1, 0])
+        self.message_dims_number = message_dims_number
 
     def predict(self, observation):
         ball_position = observation[:2]
@@ -32,6 +34,9 @@ class SimpleGoalkeeperAgent(BaseAgent):
         ball_enemy_goal_distance = np.linalg.norm(ball_enemy_goal_vector)
 
         if to_goal_distance < 0.2 and to_ball_distance < 0.2:
-            return [np.append(to_ball_vector / to_ball_distance, ball_enemy_goal_vector / ball_enemy_goal_distance)], None
+            return [np.append(np.append(
+                to_ball_vector / to_ball_distance,
+                ball_enemy_goal_vector / ball_enemy_goal_distance
+            ), [0, ] * self.message_dims_number)], None
         else:
-            return [np.append(to_goal_vector / to_goal_distance, [[0, 0]])], None
+            return [np.append(to_goal_vector / to_goal_distance, [[0, 0] + [0,] * self.message_dims_number])], None
