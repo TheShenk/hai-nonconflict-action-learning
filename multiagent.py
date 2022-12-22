@@ -269,7 +269,7 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
 
     observation = env.reset()
     total_reward = 0
-    max_reward = 0
+    max_reward = float("-inf")
 
     time = 0
     last_eval_time = 0
