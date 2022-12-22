@@ -48,6 +48,10 @@ BALL_range_arr = (BALL_max_arr - BALL_min_arr) / 2
 
 padding = 3
 
+TEAMS_COUNT = 2
+PHYSIC_OBSERVATION_DIMS_NUMBER = 4
+BALLS_COUNT = 1
+
 # get the vector pointing from [coor2] to [coor1] and
 # its magnitude
 def get_vec(coor_t, coor_o):
@@ -57,12 +61,12 @@ def get_vec(coor_t, coor_o):
 
 
 class Futbol(gym.Env):
-    def __init__(self, width=WIDTH, height=HEIGHT,
-                 player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
+    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0):
+                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0,
+                 is_out_rule_enabled=True):
 
         self.width = width
         self.height = height
@@ -72,6 +76,7 @@ class Futbol(gym.Env):
         self.number_of_player = number_of_player
         self.random_position = random_position
         self.message_dims_number = message_dims_number
+        self.is_out_rule_enabled = is_out_rule_enabled
 
         self.ball_to_goal_reward_coefficient = ball_reward_coeff
         self.run_to_ball_reward_coefficient = team_reward_coeff
@@ -108,10 +113,16 @@ class Futbol(gym.Env):
         # [1] y position
         # [2] x velocity
         # [3] y velocity
+
+        messages_count = self.number_of_player * TEAMS_COUNT
+        physic_objects_count = BALLS_COUNT + self.number_of_player * TEAMS_COUNT
+        total_observation_dims_number = messages_count * message_dims_number \
+                                        + physic_objects_count * PHYSIC_OBSERVATION_DIMS_NUMBER
+
         self.observation_space = spaces.Box(
             low=-1.0,
             high=1.0,
-            shape=((1 + message_dims_number + self.number_of_player * 2) * 4,),
+            shape=(total_observation_dims_number,),
             dtype=np.float64
         )
 
@@ -506,7 +517,7 @@ class Futbol(gym.Env):
         self._process_team_action(self.team_B.player_array, team_B_action, self.action_space_type[1])
 
         # fix the out of bound situation
-        out = self.check_and_fix_out_bounds()
+        out = self.check_and_fix_out_bounds() if self.is_out_rule_enabled else False
 
         # step environment using pymunk
         self.space.step(TIME_STEP)
