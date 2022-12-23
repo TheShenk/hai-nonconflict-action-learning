@@ -1,5 +1,6 @@
+import random
 from abc import abstractmethod
-from typing import List, Union
+from typing import List, Union, Optional, Tuple
 
 import gym
 import numpy as np
@@ -132,13 +133,13 @@ NON_VEC_COMBINER = lambda acts: np.concatenate(acts)
 NON_VEC_DISCRETE_COMBINER = lambda acts: acts
 # Для случая, когда используется непрерывное пространство. Необходимо перевести (Число агентов, Число сред, 1, y)
 # в (Число сред, Число Агентов, y)
-BOX_COMBINER = lambda acts: np.concatenate(acts, axis=2)
+BOX_COMBINER = lambda acts: np.concatenate(acts, axis=1)
 # Для случая дискретных пространств. Переводит (Число агентов, Число сред, 1) в (Число сред, Число агентов, 1)
 DISCRETE_COMBINER = lambda acts: np.array(acts).transpose()
 #TODO: Понять как работает мульти-дискретный случай
 MULTI_DISCRETE_COMBINER = lambda acts: np.concatenate(acts, axis=1)
 
-class MultiModelAgent:
+class MultiModelAgent(BaseAgent):
     def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]], actions_combiner=NON_VEC_COMBINER):
         self.models = models
         self.actions_combiner = actions_combiner
@@ -146,6 +147,19 @@ class MultiModelAgent:
     def predict(self, *args, **kwargs):
         actions = np.array([model.predict(*args, **kwargs)[0] for model in self.models])
         return self.actions_combiner(actions), None
+
+
+class RandomMultiModelAgent(BaseAgent):
+
+    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]]):
+        self.models = models
+        self.current_model = random.choice(models)
+
+    def predict(self, observation: np.ndarray, state: Optional[Tuple[np.ndarray, ...]] = None,
+                episode_start: Optional[np.ndarray] = None, deterministic: bool = False):
+        if episode_start.all():
+            self.current_model = random.choice(self.models)
+        return self.current_model.predict(observation, state, episode_start, deterministic)
 
 
 def plot_eval_results(eval_log_dir: str):

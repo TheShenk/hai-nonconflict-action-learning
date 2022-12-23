@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from abc import abstractmethod
 from typing import Optional, Union, List
 
 import gym
@@ -17,9 +18,45 @@ from stable_baselines3.common.vec_env import VecEnv
 from tqdm import tqdm
 
 import utils
+from agents.base_agent import BaseAgent
 
 
-class MultiAgentOnPolicyProxy:
+class IMultiAgenProxy:
+    @abstractmethod
+    def sample_action(self): pass
+
+    @abstractmethod
+    def start_learning(
+            self,
+            total_timesteps: int,
+            eval_env: Optional[GymEnv] = None,
+            callback: MaybeCallback = None,
+            eval_freq: int = 10000,
+            n_eval_episodes: int = 5,
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+            progress_bar: bool = False
+    ): pass
+
+    @abstractmethod
+    def record(self, observation, actions, next_observation, rewards, dones, infos, sample_actions_result): pass
+
+    @abstractmethod
+    def predict(self, *args, **kwargs): pass
+
+    @abstractmethod
+    def train(self, *args, **kwargs): pass
+
+    @abstractmethod
+    def start_record(self): pass
+
+    @abstractmethod
+    def end_record(self): pass
+
+    @abstractmethod
+    def continue_record(self): pass
+
+class MultiAgentOnPolicyProxy(IMultiAgenProxy):
     def __init__(self,
                  model: OnPolicyAlgorithm,
                  tb_log_name: str = "OnPolicy"):
@@ -141,7 +178,7 @@ class MultiAgentOnPolicyProxy:
         return self.n_steps < self.model.n_steps
 
 
-class MultiAgentOffPolicyProxy:
+class MultiAgentOffPolicyProxy(IMultiAgenProxy):
 
     def __init__(self,
                  model: OffPolicyAlgorithm,
@@ -258,16 +295,20 @@ class MultiAgentOffPolicyProxy:
         return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
 
 
-def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPolicyProxy]],
+def multiagent_learn(models: List[IMultiAgenProxy],
                      timesteps: int,
                      env: VecEnv,
                      model_save_path: Optional[str] = None,
                      action_combiner=utils.BOX_COMBINER,
                      eval_env: Optional[GymEnv] = None,
                      eval_log_dir: Optional[str] = None,
-                     eval_freq: Optional[int] = None):
+                     eval_freq: Optional[int] = None,
+                     static_models: Optional[List[BaseAgent]] = None):
 
-    observation = env.reset()
+    if static_models is None:
+        static_models = []
+
+    observation, reward, done, info = env.reset(), 0, np.ones((env.num_envs,)), None
     total_reward = 0
     max_reward = float("-inf")
 
@@ -294,7 +335,8 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
                 model.start_record()
 
             while any([model.continue_record() for model in models]):
-                sample_actions_results = [model.sample_action() for model in models]
+                sample_actions_results = [model.sample_action() for model in models] + \
+                                         [s_model.predict(observation, episode_start=done) for s_model in static_models]
                 actions = tuple(map(lambda x: x[0], sample_actions_results))
                 total_action = action_combiner(actions)
                 time += env.num_envs
@@ -313,10 +355,10 @@ def multiagent_learn(models: List[Union[MultiAgentOnPolicyProxy, MultiAgentOffPo
                 model.end_record()
                 model.train()
 
-            if time - last_eval_time > eval_freq:
+            if eval_freq and time - last_eval_time > eval_freq:
                 last_eval_time = time
                 episode_rewards, episode_lengths = evaluate_policy(
-                    utils.MultiModelAgent(models, action_combiner),
+                    utils.MultiModelAgent(models + static_models, action_combiner),
                     eval_env,
                     n_eval_episodes=10,
                     return_episode_rewards=True)
