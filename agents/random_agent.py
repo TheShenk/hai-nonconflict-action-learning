@@ -12,7 +12,7 @@ class RandomAgent(BaseAgent):
         self.env = env
         self.action_space = action_space
 
-    def predict(self,
+    def _predict(self,
                 observation: np.ndarray,
                 state: Optional[Tuple[np.ndarray, ...]] = None,
                 episode_start: Optional[np.ndarray] = None,

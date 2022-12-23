@@ -42,16 +42,4 @@ class SimpleAttackingAgent(BaseAgent):
             ball_enemy_goal_vector / ball_enemy_goal_distance
         ), [0, ] * self.message_dims_number)]
 
-    def predict(self, observation: np.ndarray, state: Optional[Tuple[np.ndarray, ...]] = None,
-                episode_start: Optional[np.ndarray] = None, deterministic: bool = False):
-        if isinstance(self.env, VecEnv):
-            actions = []
-            for i in range(self.env.num_envs):
-                action = self._predict(observation[i])
-                actions.append(action)
-            return np.reshape(actions, (-1,) + self.env.action_space.shape), None
-        else:
-            action = self._predict(observation, state, episode_start, deterministic)
-            return action, None
-
 
