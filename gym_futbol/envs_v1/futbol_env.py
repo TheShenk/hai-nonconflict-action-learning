@@ -60,6 +60,11 @@ def get_vec(coor_t, coor_o):
     return vec, vec_mag
 
 
+def inverse_physic_vector_by_x_axis(vector):
+    vector[0] *= -1
+    vector[2] *= -1
+
+
 class Futbol(gym.Env):
     def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
@@ -166,7 +171,7 @@ class Futbol(gym.Env):
                          elasticity=0.2)
 
         self.reset()
-        self.observation, self.inverse_osb = self._get_observation()
+        self.observation, self.inverse_obs = self._get_observation()
         self.team_B_model = team_B_model(self)
 
     def _position_to_initial(self):
@@ -184,7 +189,7 @@ class Futbol(gym.Env):
         # move to the target position
         self.space.step(0.0001)
 
-        self.observation, self.inverse_osb = self._get_observation()
+        self.observation, self.inverse_obs = self._get_observation()
 
     def reset(self):
         self.current_time = 0
@@ -211,17 +216,22 @@ class Futbol(gym.Env):
         ball_observation = self._normalize_ball(
             np.array(self.ball.get_observation()))
 
-        team_A_observation = self._normalize_player(
-            self.team_A.get_observation())
+        inverse_ball_observation = np.copy(ball_observation)
+        inverse_physic_vector_by_x_axis(inverse_ball_observation)
 
-        team_B_observation = self._normalize_player(
-            self.team_B.get_observation())
+        team_A_observation = self.team_A.get_observation()
+        team_A_observation = self._normalize_player(team_A_observation)
+        team_A_inverse_observation = self._inverse_observation(team_A_observation)
+
+        team_B_observation = self.team_B.get_observation()
+        team_B_observation = self._normalize_player(team_B_observation)
+        team_B_inverse_observation = self._inverse_observation(team_B_observation)
 
         obs = np.concatenate(
             (ball_observation, team_A_observation, team_B_observation)
         )
-        inverse_obs = -np.concatenate(
-            (ball_observation, team_B_observation, team_A_observation)
+        inverse_obs = np.concatenate(
+            (inverse_ball_observation, team_B_inverse_observation, team_A_inverse_observation)
         )
 
         return obs, inverse_obs
@@ -499,8 +509,12 @@ class Futbol(gym.Env):
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
     def step(self, team_A_action):
-        team_B_action, _ = self.team_B_model.predict(self.inverse_osb)
-        if self.action_space_type[1] == "box": team_B_action *= -1
+        team_B_action, _ = self.team_B_model.predict(self.inverse_obs, deterministic=True)
+
+        if self.action_space_type[1] == "box":
+            for action in team_B_action :
+                inverse_physic_vector_by_x_axis(action)
+
 
         team_A_action = self.map_action_to_players(team_A_action, self.action_space_type[0])
         team_B_action = self.map_action_to_players(team_B_action, self.action_space_type[1])
@@ -521,7 +535,7 @@ class Futbol(gym.Env):
 
         # step environment using pymunk
         self.space.step(TIME_STEP)
-        self.observation, self.inverse_osb = self._get_observation()
+        self.observation, self.inverse_obs = self._get_observation()
 
         # get reward
         if not out:
@@ -585,3 +599,12 @@ class Futbol(gym.Env):
 
     def set_team_b_model(self, model):
         self.team_B_model = model
+
+    def _inverse_observation(self, observation):
+        inverse_observation = np.copy(observation)
+        for player_index in range(self.number_of_player):
+            player_data_begin = player_index * (PHYSIC_OBSERVATION_DIMS_NUMBER + self.message_dims_number)
+            physic_player_data_component = inverse_observation[player_data_begin
+                                                               :player_data_begin+PHYSIC_OBSERVATION_DIMS_NUMBER]
+            inverse_physic_vector_by_x_axis(physic_player_data_component)
+        return inverse_observation
