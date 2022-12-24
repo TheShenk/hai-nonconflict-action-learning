@@ -509,7 +509,7 @@ class Futbol(gym.Env):
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
     # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
     def step(self, team_A_action):
-        team_B_action, _ = self.team_B_model.predict(self.inverse_obs, deterministic=True)
+        team_B_action, _ = self.team_B_model.predict(self.inverse_obs)
 
         if self.action_space_type[1] == "box":
             for action in team_B_action :
