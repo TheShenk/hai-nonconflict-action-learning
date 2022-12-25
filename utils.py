@@ -1,6 +1,4 @@
-import random
 from abc import abstractmethod
-from typing import List, Union, Optional, Tuple
 
 import gym
 import numpy as np
@@ -12,9 +10,6 @@ import pygame
 from IPython import display
 import matplotlib.pyplot as plt
 from gym import Wrapper
-from stable_baselines3.common.base_class import BaseAlgorithm
-
-from agents.base_agent import BaseAgent
 
 
 class BaseVisualizer:
@@ -123,44 +118,6 @@ class TestStaticAgent:
 
     def predict(self, *args, **kwargs):
         return np.array([[-1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]), None
-
-# Здесь представлены функции для объединения действий от разных агентов в общее
-# Самый простой - для случая, когда не используются векторные среды. В таком случае для всех видов пространств
-# действий можем просто соединить действия
-NON_VEC_COMBINER = lambda acts: np.concatenate(acts)
-# Обработка случая, когда модели используют дискретное пространство действий. В таком случае actions - уже
-# массив чисел, который нужно вернуть. Concatenate для него вызовет ошибку.
-NON_VEC_DISCRETE_COMBINER = lambda acts: acts
-# Для случая, когда используется непрерывное пространство. Необходимо перевести (Число агентов, Число сред, 1, y)
-# в (Число сред, Число Агентов, y)
-BOX_COMBINER = lambda acts: np.concatenate(acts, axis=1)
-# Для случая дискретных пространств. Переводит (Число агентов, Число сред, 1) в (Число сред, Число агентов, 1)
-DISCRETE_COMBINER = lambda acts: np.array(acts).transpose()
-#TODO: Понять как работает мульти-дискретный случай
-MULTI_DISCRETE_COMBINER = lambda acts: np.concatenate(acts, axis=1)
-
-class MultiModelAgent(BaseAgent):
-    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]], actions_combiner=NON_VEC_COMBINER):
-        self.models = models
-        self.actions_combiner = actions_combiner
-
-    def predict(self, *args, **kwargs):
-        actions = np.array([model.predict(*args, **kwargs)[0] for model in self.models])
-        return self.actions_combiner(actions), None
-
-
-class RandomMultiModelAgent(BaseAgent):
-
-    def __init__(self, models: List[Union[BaseAlgorithm, BaseAgent]]):
-        self.models = models
-        self.current_model = random.choice(models)
-
-    def predict(self, observation: np.ndarray, state: Optional[Tuple[np.ndarray, ...]] = None,
-                episode_start: Optional[np.ndarray] = None, deterministic: bool = False):
-        if episode_start.all():
-            self.current_model = random.choice(self.models)
-        return self.current_model.predict(observation, state, episode_start, deterministic)
-
 
 def plot_eval_results(eval_log_dir: str):
     data = np.load(f'{eval_log_dir}/evaluations.npz')

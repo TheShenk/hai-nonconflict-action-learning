@@ -1,27 +1,38 @@
-import os
+import io
+import pathlib
 import sys
 import time
 from abc import abstractmethod
-from typing import Optional, Union, List
+from typing import Optional, Union, Iterable, Type
 
 import gym
+from stable_baselines3.common.base_class import BaseAlgorithm, BaseAlgorithmSelf
 from stable_baselines3.common.noise import VectorizedActionNoise
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, TrainFrequencyUnit, RolloutReturn
 
 import torch as th
 import numpy as np
 from stable_baselines3.common.utils import obs_as_tensor, should_collect_more_steps, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
-from tqdm import tqdm
-
-import utils
-from agents.base_agent import BaseAgent
 
 
-class IMultiAgenProxy:
+class MultiAgentProxy:
+
+    def __init__(self, model: BaseAlgorithm):
+        self.model = model
+
+    def save(self, path: Union[str, pathlib.Path, io.BufferedIOBase],
+             exclude: Optional[Iterable[str]] = None,
+             include: Optional[Iterable[str]] = None):
+        self.model.save(path, exclude, include)
+
+    @classmethod
+    def load(cls, model_cls: Type[BaseAlgorithmSelf], *args, **kwargs):
+        model = model_cls.load(*args, **kwargs)
+        return cls(model)
+
     @abstractmethod
     def sample_action(self): pass
 
@@ -56,7 +67,7 @@ class IMultiAgenProxy:
     @abstractmethod
     def continue_record(self): pass
 
-class MultiAgentOnPolicyProxy(IMultiAgenProxy):
+class MultiAgentOnPolicyProxy(MultiAgentProxy):
     def __init__(self,
                  model: OnPolicyAlgorithm,
                  tb_log_name: str = "OnPolicy"):
@@ -178,7 +189,7 @@ class MultiAgentOnPolicyProxy(IMultiAgenProxy):
         return self.n_steps < self.model.n_steps
 
 
-class MultiAgentOffPolicyProxy(IMultiAgenProxy):
+class MultiAgentOffPolicyProxy(MultiAgentProxy):
 
     def __init__(self,
                  model: OffPolicyAlgorithm,
@@ -293,94 +304,3 @@ class MultiAgentOffPolicyProxy(IMultiAgenProxy):
 
     def continue_record(self):
         return should_collect_more_steps(self.model.train_freq, self.num_collected_steps, self.num_collected_episodes)
-
-
-def multiagent_learn(models: List[IMultiAgenProxy],
-                     timesteps: int,
-                     env: VecEnv,
-                     model_save_path: Optional[str] = None,
-                     action_combiner=utils.BOX_COMBINER,
-                     eval_env: Optional[GymEnv] = None,
-                     eval_log_dir: Optional[str] = None,
-                     eval_freq: Optional[int] = None,
-                     static_models: Optional[List[BaseAgent]] = None):
-
-    if static_models is None:
-        static_models = []
-
-    observation, reward, done, info = env.reset(), 0, np.ones((env.num_envs,)), None
-    total_reward = 0
-    max_reward = float("-inf")
-
-    time = 0
-    last_eval_time = 0
-
-    evaluations_timesteps = []
-    evaluations_results = []
-    evaluations_length = []
-
-    eval_path = eval_log_dir
-    if eval_log_dir:
-        os.makedirs(eval_log_dir, exist_ok=True)
-        eval_path = os.path.join(eval_log_dir, "evaluations")
-
-    for model in models:
-        model.start_learning(timesteps)
-
-    with tqdm(total=timesteps) as pbar:
-        while time < timesteps:
-            current_step_reward = 0
-
-            for model in models:
-                model.start_record()
-
-            while any([model.continue_record() for model in models]):
-                sample_actions_results = [model.sample_action() for model in models] + \
-                                         [s_model.predict(observation, episode_start=done) for s_model in static_models]
-                actions = tuple(map(lambda x: x[0], sample_actions_results))
-                total_action = action_combiner(actions)
-                time += env.num_envs
-                pbar.update(env.num_envs)
-
-                next_observation, reward, done, info = env.step(total_action)
-                total_reward += reward
-                current_step_reward += reward
-
-                for model, action, sample_actions_result in zip(models, actions, sample_actions_results):
-                    model.record(observation, action, next_observation, reward, done, info, sample_actions_result)
-
-                observation = next_observation
-
-            for model in models:
-                model.end_record()
-                model.train()
-
-            if eval_freq and time - last_eval_time > eval_freq:
-                last_eval_time = time
-                episode_rewards, episode_lengths = evaluate_policy(
-                    utils.MultiModelAgent(models + static_models, action_combiner),
-                    eval_env,
-                    n_eval_episodes=10,
-                    return_episode_rewards=True)
-
-                mean_reward, std_reward = np.mean(episode_rewards), np.std(episode_rewards)
-                if mean_reward > max_reward:
-                    max_reward = mean_reward
-                    for index, model in enumerate(models):
-                        model.model.save(f"{model_save_path}/best-{index}")
-
-                if eval_path:
-                    evaluations_timesteps.append(time)
-                    evaluations_results.append(episode_rewards)
-                    evaluations_length.append(episode_lengths)
-
-                    np.savez(
-                        eval_path,
-                        timesteps=evaluations_timesteps,
-                        results=evaluations_results,
-                        ep_lengths=evaluations_length,
-                    )
-
-    if model_save_path:
-        for index, model in enumerate(models):
-            model.model.save(f"{model_save_path}/last-{index}")

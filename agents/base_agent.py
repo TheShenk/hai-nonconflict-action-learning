@@ -28,7 +28,7 @@ class BaseAgent:
         if observation.ndim > len(self.env.observation_space.shape):
             actions = []
             for i in range(observation.shape[0]):
-                action = self._predict(observation[i])
+                action = self._predict(observation[i], episode_start=episode_start)
                 actions.append(action)
             return np.reshape(actions, (-1,) + self.env.action_space.shape), None
         else:
