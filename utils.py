@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import List, Any
 
 import gym
 import numpy as np
@@ -118,6 +119,19 @@ class TestStaticAgent:
 
     def predict(self, *args, **kwargs):
         return np.array([[-1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]), None
+
+class ListAsValue:
+
+    def __init__(self, values: List[Any]):
+        self.values = values
+
+    def __getattr__(self, item):
+        attributes = [getattr(value, item) for value in self.values]
+        return ListAsValue(attributes)
+
+    def __call__(self, *args, **kwargs):
+        results = [value(*args, **kwargs) for value in self.values]
+        return ListAsValue(results)
 
 def plot_eval_results(eval_log_dir: str):
     data = np.load(f'{eval_log_dir}/evaluations.npz')

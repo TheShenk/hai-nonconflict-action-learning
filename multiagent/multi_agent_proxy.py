@@ -23,6 +23,9 @@ class MultiAgentProxy:
     def __init__(self, model: BaseAlgorithm):
         self.model = model
 
+    def __getattr__(self, item):
+        return getattr(self.model, item)
+
     def save(self, path: Union[str, pathlib.Path, io.BufferedIOBase],
              exclude: Optional[Iterable[str]] = None,
              include: Optional[Iterable[str]] = None):

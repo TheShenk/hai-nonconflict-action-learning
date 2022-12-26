@@ -1,11 +1,14 @@
-from typing import List, Optional, Tuple, Type
+from typing import List, Optional, Tuple, Type, Callable
 
 import numpy as np
+from stable_baselines3.common.callbacks import BaseCallback, ConvertCallback
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
 from tqdm import tqdm
 
+import utils
 from agents.base_agent import BaseAgent
 from multiagent.action_combiners import NON_VEC_COMBINER
+from multiagent.callbacks import MACallback
 from multiagent.multi_agent_proxy import MultiAgentProxy
 
 
@@ -13,11 +16,11 @@ class MultiModelAgent(BaseAgent):
 
     def __init__(self,
                  env: GymEnv,
-                 models: List[MultiAgentProxy],
+                 models: Optional[List[MultiAgentProxy]] = None,
                  static_models: Optional[List[BaseAgent]] = None,
                  actions_combiner=NON_VEC_COMBINER):
         super().__init__(env)
-        self.models = models
+        self.models = models if models is not None else []
         self.static_models = static_models if static_models is not None else []
         self.actions_combiner = actions_combiner
 
@@ -44,7 +47,11 @@ class MultiModelAgent(BaseAgent):
 
     def learn(self,
               total_timesteps: int,
-              callback: MaybeCallback = None):
+              callback: Optional[MACallback] = None):
+
+
+        if callback is None:
+            callback = MACallback()
 
         observation, reward, done, info = self.env.reset(), 0, np.ones((self.env.num_envs,)), None
         total_reward = 0
@@ -53,7 +60,9 @@ class MultiModelAgent(BaseAgent):
 
         for model in self.models:
             model.start_learning(total_timesteps)
-        callback.on_training_start(locals(), globals())
+
+        callback.init_callback(self)
+        callback.on_training_start()
 
         with tqdm(total=total_timesteps) as pbar:
             while time < total_timesteps:
