@@ -53,7 +53,7 @@ class MultiAgentProxy:
     ): pass
 
     @abstractmethod
-    def record(self, observation, actions, next_observation, rewards, dones, infos, sample_actions_result): pass
+    def record(self, observation, next_observation, rewards, dones, infos, sample_actions_result): pass
 
     @abstractmethod
     def predict(self, *args, **kwargs): pass
@@ -117,7 +117,7 @@ class MultiAgentOnPolicyProxy(MultiAgentProxy):
             progress_bar,
         )
 
-    def record(self, observation, actions, next_observation, rewards, dones, infos, sample_actions_result):
+    def record(self, observation, next_observation, rewards, dones, infos, sample_actions_result):
         clipped_actions, actions, values, log_probs = sample_actions_result
 
         if self.model.use_sde and self.model.sde_sample_freq > 0:
@@ -231,7 +231,7 @@ class MultiAgentOffPolicyProxy(MultiAgentProxy):
             progress_bar,
         )
 
-    def record(self, observation, actions, next_observation, rewards, dones, infos, sample_actions_result):
+    def record(self, observation, next_observation, rewards, dones, infos, sample_actions_result):
         if self.model.use_sde and self.model.sde_sample_freq > 0 and self.num_collected_steps % self.model.sde_sample_freq == 0:
             # Sample a new noise matrix
             self.model.actor.reset_noise(self.model.env.num_envs)

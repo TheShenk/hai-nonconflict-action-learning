@@ -49,12 +49,10 @@ class MultiModelAgent(BaseAgent):
               total_timesteps: int,
               callback: Optional[MACallback] = None):
 
-
         if callback is None:
             callback = MACallback()
 
-        observation, reward, done, info = self.env.reset(), 0, np.ones((self.env.num_envs,)), None
-        total_reward = 0
+        observations, dones = [self.env.reset(),]*len(self.models), np.ones((self.env.num_envs,))
 
         time = 0
 
@@ -66,7 +64,6 @@ class MultiModelAgent(BaseAgent):
 
         with tqdm(total=total_timesteps) as pbar:
             while time < total_timesteps:
-                current_step_reward = 0
 
                 for model in self.models:
                     model.start_record()
@@ -74,24 +71,19 @@ class MultiModelAgent(BaseAgent):
                 callback.on_rollout_start()
 
                 while any([model.continue_record() for model in self.models]):
-                    sample_actions_results = [model.sample_action() for model in self.models] + \
-                                             [s_model.predict(observation, episode_start=done) for s_model in
-                                              self.static_models]
-                    actions = tuple(map(lambda x: x[0], sample_actions_results))
-                    total_action = self.actions_combiner(actions)
-
-                    next_observation, reward, done, info = self.env.step(total_action)
-                    total_reward += reward
-                    current_step_reward += reward
+                    next_observations, rewards, dones, infos, sample_actions_results \
+                        = self.collect_step_info(observations, dones)
 
                     time += self.env.num_envs
                     pbar.update(self.env.num_envs)
                     callback.on_step()
 
-                    for model, action, sample_actions_result in zip(self.models, actions, sample_actions_results):
-                        model.record(observation, action, next_observation, reward, done, info, sample_actions_result)
+                    for model, obs, n_obs, rew, sar in zip(self.models,
+                                                           observations, next_observations, rewards,
+                                                           sample_actions_results):
+                        model.record(obs, n_obs, rew, dones, infos, sar)
 
-                    observation = next_observation
+                    observations = next_observations
 
                 callback.on_rollout_end()
 
@@ -100,3 +92,21 @@ class MultiModelAgent(BaseAgent):
                     model.train()
 
         callback.on_training_end()
+
+    def collect_step_info(self, observations, done):
+
+        models_count = len(self.models)
+        static_models_count = len(self.static_models)
+
+        sample_actions_results = []
+        for model_index in range(models_count):
+            sample_actions_results.append(self.models[model_index].sample_action())
+        for s_model_index in range(static_models_count):
+            model_observation = observations[models_count+s_model_index]
+            sample_actions_results.append(self.static_models[s_model_index].predict(model_observation, done))
+
+        actions = tuple(map(lambda x: x[0], sample_actions_results))
+        total_action = self.actions_combiner(actions)
+
+        next_observation, reward, done, info = self.env.step(total_action)
+        return [next_observation,] * models_count, [reward,] * models_count, done, info, sample_actions_results
