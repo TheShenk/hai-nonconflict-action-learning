@@ -1,5 +1,7 @@
 import random
 
+import gym.spaces
+import numpy as np
 from gym import spaces
 
 from agents.random_agent import RandomAgent
@@ -29,8 +31,6 @@ class TwoSideFootball(Futbol):
             self.team_A: [self.width, self.height/2],
             self.team_B: [0, self.height/2]
         }
-
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2, self.number_of_player, 4 + message_dims_number))
 
     def _step(self, team, action, action_space_type):
         team_action = self.map_action_to_players(action, action_space_type)
@@ -95,3 +95,8 @@ class TwoSideFootball(Futbol):
             self.done = True
 
         return self.observation, self.inverse_obs, self.done, {}
+
+    # Используется, чтобы поддержать Monitor-wrapper
+    def step(self, team_A_action):
+        reward = np.array([self.calculate_left_reward(), self.calculate_right_reward()])
+        return self.observation, reward, self.done, {}

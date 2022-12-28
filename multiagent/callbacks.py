@@ -56,14 +56,14 @@ class MAEvalCallback(MACallback):
             self.eval_path = os.path.join(log_path, "evaluations")
 
         self.last_eval_time = 0
-        self.time = 0
+        self.n_calls = 0
 
     def on_step(self):
 
-        self.time +=1
+        self.n_calls +=1
 
-        if self.time - self.last_eval_time > self.eval_freq:
-            self.last_eval_time = self.time
+        if self.n_calls - self.last_eval_time > self.eval_freq:
+            self.last_eval_time = self.n_calls
             episode_rewards, episode_lengths = evaluate_policy(
                 self.model,
                 self.eval_env,
@@ -80,7 +80,7 @@ class MAEvalCallback(MACallback):
                 self.model.save(f"{self.model_save_path}/best")
 
             if self.eval_path:
-                self.evaluations_timesteps.append(self.time)
+                self.evaluations_timesteps.append(self.n_calls)
                 self.evaluations_results.append(episode_rewards)
                 self.evaluations_length.append(episode_lengths)
 
@@ -95,8 +95,8 @@ class MAEvalCallback(MACallback):
             self.logger.record("eval/mean_ep_length", mean_ep_length)
 
             # Dump log so the evaluation results are printed with the correct timestep
-            self.logger.record("time/total_timesteps", self.time, exclude="tensorboard")
-            self.logger.dump(self.time)
+            self.logger.record("time/total_timesteps", self.model.time, exclude="tensorboard")
+            self.logger.dump(self.model.time)
 
     def on_training_end(self):
         if self.model_save_path:

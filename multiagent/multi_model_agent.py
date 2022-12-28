@@ -20,9 +20,11 @@ class MultiModelAgent(BaseAgent):
                  static_models: Optional[List[BaseAgent]] = None,
                  actions_combiner=NON_VEC_COMBINER):
         super().__init__(env)
+
         self.models = models if models is not None else []
         self.static_models = static_models if static_models is not None else []
         self.actions_combiner = actions_combiner
+        self.time = 0
 
     def save(self, path):
         for index, model in enumerate(self.models):
@@ -54,7 +56,7 @@ class MultiModelAgent(BaseAgent):
 
         observations, dones = [self.env.reset(),]*len(self.models), np.ones((self.env.num_envs,))
 
-        time = 0
+        self.time = 0
 
         for model in self.models:
             model.start_learning(total_timesteps)
@@ -63,7 +65,7 @@ class MultiModelAgent(BaseAgent):
         callback.on_training_start()
 
         with tqdm(total=total_timesteps) as pbar:
-            while time < total_timesteps:
+            while self.time < total_timesteps:
 
                 for model in self.models:
                     model.start_record()
@@ -74,7 +76,7 @@ class MultiModelAgent(BaseAgent):
                     next_observations, rewards, dones, infos, sample_actions_results \
                         = self.collect_step_info(observations, dones)
 
-                    time += self.env.num_envs
+                    self.time += self.env.num_envs
                     pbar.update(self.env.num_envs)
                     callback.on_step()
 
