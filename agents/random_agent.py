@@ -18,5 +18,5 @@ class RandomAgent(BaseAgent):
                 episode_start: Optional[np.ndarray] = None,
                 deterministic: bool = False):
         if self.action_space:
-            return self.action_space.sample(), None
-        return self.env.action_space.sample(), None
+            return self.action_space.sample()
+        return self.env.action_space.sample()
