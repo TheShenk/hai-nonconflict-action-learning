@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import utils
 from agents.base_agent import BaseAgent
-from multiagent.action_combiners import NON_VEC_COMBINER
+from multiagent.action_combiners import NON_VEC_COMBINER, BOX_COMBINER
 from multiagent.callbacks import MACallback
 from multiagent.multi_agent_proxy import MultiAgentProxy
 
@@ -18,12 +18,28 @@ class MultiModelAgent(BaseAgent):
                  env: GymEnv,
                  models: Optional[List[MultiAgentProxy]] = None,
                  static_models: Optional[List[BaseAgent]] = None,
-                 actions_combiner=NON_VEC_COMBINER):
+                 nvec_actions_combiner = NON_VEC_COMBINER,
+                 vec_actions_combiner = BOX_COMBINER):
+        """
+
+        :param env: Среда, в которой действует агент.
+        :param models: Список моделей которые способны обучаться.
+        :param static_models: Список статичных моделей. Их действия добавляются к действиям обычных моделей, но не
+        используются для обучения.
+        :param nvec_actions_combiner: Функция для объединения действий, когда известны действия ото всех агентов для
+        одной среды.
+        :param vec_actions_combiner: Функция для обединения действий, когда известны действия всех агентов во всех
+        средах и они представлены как [[агент1 в среде1, ..., агент1 в средеM],
+                                                         ...,
+                                       [агентN в среде1, ..., агентN в средеM]
+         ].
+        """
         super().__init__(env)
 
         self.models = models if models is not None else []
         self.static_models = static_models if static_models is not None else []
-        self.actions_combiner = actions_combiner
+        self.nvec_actions_combiner = nvec_actions_combiner
+        self.vec_actions_combiner = vec_actions_combiner
         self.time = 0
 
     def save(self, path):
@@ -45,7 +61,7 @@ class MultiModelAgent(BaseAgent):
 
         actions = np.array([model.predict(observation, state, episode_start, deterministic)[0]
                             for model in self.models+self.static_models])
-        return self.actions_combiner(actions)
+        return self.nvec_actions_combiner(actions)
 
     def learn(self,
               total_timesteps: int,
@@ -108,7 +124,7 @@ class MultiModelAgent(BaseAgent):
             sample_actions_results.append(self.static_models[s_model_index].predict(model_observation, done))
 
         actions = tuple(map(lambda x: x[0], sample_actions_results))
-        total_action = self.actions_combiner(actions)
+        total_action = self.vec_actions_combiner(actions)
 
         next_observation, reward, done, info = self.env.step(total_action)
         return [next_observation,] * models_count, [reward,] * models_count, done, info, sample_actions_results

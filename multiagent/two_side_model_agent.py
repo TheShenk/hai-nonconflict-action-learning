@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 
-from multiagent.action_combiners import BOX_COMBINER
+from multiagent.action_combiners import BOX_COMBINER, NON_VEC_COMBINER
 from multiagent.multi_agent_proxy import MultiAgentProxy
 from multiagent.multi_model_agent import MultiModelAgent
 
@@ -14,10 +14,13 @@ class TwoSideModelAgent(MultiModelAgent):
                  env: VecEnv,
                  left_models: List[MultiAgentProxy],
                  right_models: List[MultiAgentProxy],
-                 actions_combiner=BOX_COMBINER):
+                 nvec_actions_combiner=NON_VEC_COMBINER,
+                 vec_actions_combiner=BOX_COMBINER):
 
         models = left_models + right_models
-        super().__init__(env, models, actions_combiner=actions_combiner)
+        super().__init__(env, models,
+                         nvec_actions_combiner=nvec_actions_combiner,
+                         vec_actions_combiner=vec_actions_combiner)
 
         self.left_models = left_models
         self.right_models = right_models
@@ -32,7 +35,7 @@ class TwoSideModelAgent(MultiModelAgent):
                  deterministic: bool = False):
         actions = np.array([model.predict(observation, state, episode_start, deterministic)[0]
                             for model in self.left_models])
-        return self.actions_combiner(actions)
+        return self.nvec_actions_combiner(actions)
 
 
     def collect_step_info(self, observation, done):
@@ -43,8 +46,8 @@ class TwoSideModelAgent(MultiModelAgent):
         left_actions = tuple(map(lambda sar: sar[0], left_sample_actions_result))
         right_actions = tuple(map(lambda sar: sar[0], right_sample_actions_result))
 
-        left_total_action = self.actions_combiner(left_actions)
-        right_total_action = self.actions_combiner(right_actions)
+        left_total_action = self.vec_actions_combiner(left_actions)
+        right_total_action = self.vec_actions_combiner(right_actions)
 
         for env_index in range(self.env.num_envs):
             self.env.env_method("act", left_total_action[env_index], indices=env_index)

@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.type_aliases import GymEnv
+from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 
 from utils import ListAsValue
 
@@ -34,13 +35,21 @@ class MACallback:
 
 class MAEvalCallback(MACallback):
 
-    def __init__(self, eval_env: GymEnv, n_eval_episodes: int = 5, eval_freq: int = 10000,
-                 log_path: Optional[str] = None, model_save_path: Optional[str] = None, deterministic: bool = False):
+    def __init__(self,
+                 eval_env: GymEnv,
+                 n_eval_episodes: int = 5,
+                 eval_freq: int = 10000,
+                 log_path: Optional[str] = None,
+                 model_save_path: Optional[str] = None,
+                 deterministic: bool = False):
 
         super().__init__()
         self.max_reward = float("-inf")
 
+        if not isinstance(eval_env, VecEnv):
+            eval_env = DummyVecEnv([lambda: eval_env])
         self.eval_env = eval_env
+
         self.n_eval_episodes = n_eval_episodes
         self.eval_freq = eval_freq
         self.model_save_path = model_save_path
@@ -77,7 +86,8 @@ class MAEvalCallback(MACallback):
 
             if mean_reward > self.max_reward:
                 self.max_reward = mean_reward
-                self.model.save(f"{self.model_save_path}/best")
+                if self.model_save_path:
+                    self.model.save(f"{self.model_save_path}/best")
 
             if self.eval_path:
                 self.evaluations_timesteps.append(self.n_calls)
