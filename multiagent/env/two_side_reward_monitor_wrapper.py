@@ -18,5 +18,9 @@ class TwoSideRewardMonitor(gym.Wrapper):
         self.total_right_reward += info["right_reward"]
         info["total_right_reward"] = self.total_right_reward
 
+        if done:
+            self.total_left_reward = 0
+            self.total_right_reward = 0
+
         return observation, reward, done, info
 
