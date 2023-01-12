@@ -1,8 +1,5 @@
 import random
-
-import gym.spaces
 import numpy as np
-from gym import spaces
 
 from agents.random_agent import RandomAgent
 from gym_futbol.envs_v1 import Futbol
@@ -98,5 +95,25 @@ class TwoSideFootball(Futbol):
 
     # Используется, чтобы поддержать Monitor-wrapper
     def step(self, team_A_action):
-        reward = np.array([self.calculate_left_reward(), self.calculate_right_reward()])
-        return self.observation, reward, self.done, {}
+        left_reward = self.calculate_left_reward()
+        right_reward = self.calculate_right_reward()
+        return self.observation, left_reward, self.done, {"left_reward": left_reward, "right_reward": right_reward}
+
+# Данная среда позволяет обучать одновременно атакующего и вратаря в игре друг против друга.
+class AttackingVsGoalkeeper(TwoSideFootball):
+
+    def calculate_right_reward(self):
+        reward = 0
+
+        ball_position = self.ball.get_position()
+        on_right_side = ball_position[0] < self.width // 2
+
+        # get reward
+        if not self.out and on_right_side:
+            reward += self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_B])
+
+        if self.ball_contact_goal() and on_right_side:
+            goal_reward = 1000
+            reward -= goal_reward
+
+        return reward

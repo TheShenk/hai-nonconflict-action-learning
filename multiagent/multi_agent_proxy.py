@@ -73,11 +73,13 @@ class MultiAgentProxy:
 class MultiAgentOnPolicyProxy(MultiAgentProxy):
     def __init__(self,
                  model: OnPolicyAlgorithm,
-                 tb_log_name: str = "OnPolicy"):
+                 tb_log_name: str = "OnPolicy",
+                 two_side_reward_log: bool = False):
         self.n_steps = 0
         self.iteration = 0
         self.model = model
         self.tb_log_name = tb_log_name
+        self.two_side_reward_log = two_side_reward_log
 
     def sample_action(self):
         with th.no_grad():
@@ -162,6 +164,11 @@ class MultiAgentOnPolicyProxy(MultiAgentProxy):
                                          safe_mean([ep_info["r"] for ep_info in self.model.ep_info_buffer]))
                 self.model.logger.record("rollout/ep_len_mean",
                                          safe_mean([ep_info["l"] for ep_info in self.model.ep_info_buffer]))
+                if self.two_side_reward_log:
+                    self.model.logger.record("rollout/ep_left_rew",
+                                             safe_mean([ep_info["total_left_reward"] for ep_info in self.model.ep_info_buffer]))
+                    self.model.logger.record("rollout/ep_right_rew",
+                                             safe_mean([ep_info["total_right_reward"] for ep_info in self.model.ep_info_buffer]))
             self.model.logger.record("time/fps", fps)
             self.model.logger.record("time/time_elapsed", int(time_elapsed), exclude="tensorboard")
             self.model.logger.record("time/total_timesteps", self.model.num_timesteps, exclude="tensorboard")

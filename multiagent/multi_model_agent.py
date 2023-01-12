@@ -127,4 +127,6 @@ class MultiModelAgent(BaseAgent):
         total_action = self.vec_actions_combiner(actions)
 
         next_observation, reward, done, info = self.env.step(total_action)
+
+        # TODO: Нужно ли здесь использовать models_count+static_models_count?
         return [next_observation,] * models_count, [reward,] * models_count, done, info, sample_actions_results
