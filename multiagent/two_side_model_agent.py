@@ -94,3 +94,16 @@ class TwoSideModelAgent(MultiModelAgent):
         return observation, reward, done, info, sample_actions_result
 
 
+class AttackGoalkeeperModelAgent(TwoSideModelAgent):
+
+    # Используется переопределение _predict для правильной работы evaluate callback'a. В отличии от TwoSideModelAgent
+    # может оценивать команду из вратаря и атакующего.
+    def _predict(self,
+                 observation: np.ndarray,
+                 state: Optional[Tuple[np.ndarray, ...]] = None,
+                 episode_start: Optional[np.ndarray] = None,
+                 deterministic: bool = False):
+        actions = np.array([model.predict(observation, state, episode_start, deterministic)[0]
+                            for model in self.left_models + self.right_models])
+        return self.nvec_actions_combiner(actions)
+
