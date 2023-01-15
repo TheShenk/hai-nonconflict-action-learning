@@ -110,7 +110,7 @@ class AttackingVsGoalkeeper(TwoSideFootball):
 
         # get reward
         if not self.out and on_right_side:
-            reward += self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_B])
+            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_A])
 
         if self.ball_contact_goal() and on_right_side:
             goal_reward = 1000
