@@ -4,7 +4,7 @@ import numpy as np
 from agents.random_agent import RandomAgent
 from gym_futbol.envs_v1 import Futbol
 from gym_futbol.envs_v1.futbol_env import inverse_physic_vector_by_x_axis, WIDTH, HEIGHT, PLAYER_RADIUS, BALL_RADIUS, \
-    TOTAL_TIME, NUMBER_OF_PLAYER, TIME_STEP
+    TOTAL_TIME, NUMBER_OF_PLAYER, TIME_STEP, get_vec
 
 
 class TwoSideFootball(Futbol):
@@ -102,15 +102,41 @@ class TwoSideFootball(Futbol):
 # Данная среда позволяет обучать одновременно атакующего и вратаря в игре друг против друга.
 class AttackingVsGoalkeeper(TwoSideFootball):
 
+    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
+                 total_time=TOTAL_TIME, debug=False,
+                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
+                 action_space_type="box", random_position=False,
+                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=3, message_dims_number=0,
+                 is_out_rule_enabled=True):
+        super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
+                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, message_dims_number,
+                         is_out_rule_enabled)
+        self.goalkeeper_init_pos = self.get_goalkeeper().get_position()
+        self.goalkeeper_reward_coeff = goalkeeper_reward_coeff
+
+    def get_goalkeeper(self):
+        return self.team_B.player_array[0]
+
+    def get_goalkeeper_reward(self, b_goalkeeper_pos, a_goalkeeper_pos, goal_pos):
+        _, before_distance_to_goal = get_vec(goal_pos, b_goalkeeper_pos)
+        _, after_distance_to_goal = get_vec(goal_pos, a_goalkeeper_pos)
+        return self.goalkeeper_reward_coeff * (before_distance_to_goal - after_distance_to_goal)
+
     def calculate_right_reward(self):
         reward = 0
 
         ball_position = self.ball.get_position()
         on_right_side = ball_position[0] < self.width // 2
 
+        goalkeeper_pos = self.get_goalkeeper().get_position()
+
         # get reward
-        if not self.out and on_right_side:
-            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_A])
+        if not self.out:
+            goal_pos = self.goal_position[self.team_A]
+            reward -= self.get_ball_reward(self.ball_init, ball_position, goal_pos)
+            reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, goal_pos)
+
+        self.goalkeeper_init_pos = goalkeeper_pos
 
         if self.ball_contact_goal() and on_right_side:
             goal_reward = 1000
