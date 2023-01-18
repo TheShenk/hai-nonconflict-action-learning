@@ -26,8 +26,8 @@ def multiagent_learn(models: List[MultiAgentProxy],
                                      model_save_path=model_save_path,
                                      eval_freq=eval_freq,
                                      log_path=eval_log_dir,
-                                     n_eval_episodes=10)
+                                     n_eval_episodes=30)
     multi_model = MultiModelAgent(env, models, static_models,
-                                  nvec_actions_combiner=action_combiners,
+                                  nvec_actions_combiner=action_combiner,
                                   vec_actions_combiner=action_combiner)
     multi_model.learn(timesteps, eval_callback)
