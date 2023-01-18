@@ -106,7 +106,7 @@ class AttackingVsGoalkeeper(TwoSideFootball):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=3, message_dims_number=0,
+                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=1, message_dims_number=0,
                  is_out_rule_enabled=True):
         super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
                          action_space_type, random_position, team_reward_coeff, ball_reward_coeff, message_dims_number,
@@ -133,6 +133,7 @@ class AttackingVsGoalkeeper(TwoSideFootball):
         # get reward
         if not self.out:
             goal_pos = self.goal_position[self.team_A]
+            goal_pos[0] -= 10
             reward -= self.get_ball_reward(self.ball_init, ball_position, goal_pos)
             reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, goal_pos)
 
