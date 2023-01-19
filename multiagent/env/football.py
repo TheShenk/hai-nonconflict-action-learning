@@ -113,6 +113,11 @@ class AttackingVsGoalkeeper(TwoSideFootball):
                          is_out_rule_enabled)
         self.goalkeeper_init_pos = self.get_goalkeeper().get_position()
         self.goalkeeper_reward_coeff = goalkeeper_reward_coeff
+        self.goalkeeper_goal_pos = self.goal_position[self.team_A].copy()
+
+        # Смещение позиции, к которой стремится вратарь. Необходимо из-за особенностей среды, иначе вратарь
+        # слишком близко к воротам и мяч задевает ворота, даже если там стоит вратарь
+        self.goalkeeper_goal_pos[0] -= 5
 
     def get_goalkeeper(self):
         return self.team_B.player_array[0]
@@ -132,10 +137,8 @@ class AttackingVsGoalkeeper(TwoSideFootball):
 
         # get reward
         if not self.out:
-            goal_pos = self.goal_position[self.team_A]
-            goal_pos[0] -= 10
-            reward -= self.get_ball_reward(self.ball_init, ball_position, goal_pos)
-            reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, goal_pos)
+            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goalkeeper_goal_pos)
+            reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, self.goalkeeper_goal_pos)
 
         self.goalkeeper_init_pos = goalkeeper_pos
 
