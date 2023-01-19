@@ -137,7 +137,7 @@ class AttackingVsGoalkeeper(TwoSideFootball):
 
         # get reward
         if not self.out:
-            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goalkeeper_goal_pos)
+            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_A])
             reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, self.goalkeeper_goal_pos)
 
         self.goalkeeper_init_pos = goalkeeper_pos
