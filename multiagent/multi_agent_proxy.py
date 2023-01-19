@@ -203,13 +203,15 @@ class MultiAgentOffPolicyProxy(MultiAgentProxy):
 
     def __init__(self,
                  model: OffPolicyAlgorithm,
-                 log_interval: Optional[int] = None,
-                 tb_log_name: str = "OffPolicy"):
+                 log_interval: Optional[int] = 1,
+                 tb_log_name: str = "OffPolicy",
+                 two_side_reward_log: bool = False):
         self.num_collected_steps = 0
         self.rollout = None
         self.model = model
         self.log_interval = log_interval
         self.tb_log_name = tb_log_name
+        self.two_side_reward_log = two_side_reward_log
 
     def sample_action(self):
         return self.model._sample_action(self.model.learning_starts, self.model.action_noise,
@@ -276,6 +278,15 @@ class MultiAgentOffPolicyProxy(MultiAgentProxy):
                 # Log training infos
                 if self.log_interval is not None and self.model._episode_num % self.log_interval == 0:
                     self.model._dump_logs()
+                    episode_end_available = len(self.model.ep_info_buffer) > 0 and len(self.model.ep_info_buffer[0]) > 0
+                    if episode_end_available and self.two_side_reward_log:
+                        self.model.logger.record("rollout/ep_left_rew",
+                                                 safe_mean([ep_info["total_left_reward"] for ep_info in
+                                                            self.model.ep_info_buffer]))
+                        self.model.logger.record("rollout/ep_right_rew",
+                                                 safe_mean([ep_info["total_right_reward"] for ep_info in
+                                                            self.model.ep_info_buffer]))
+
 
     def predict(self, *args, **kwargs):
         return self.model.predict(*args, **kwargs)
