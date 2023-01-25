@@ -364,6 +364,9 @@ class Futbol(gym.Env):
         return self.action_space.sample()
 
     def _process_box_action(self, player, action):
+
+        action = np.clip(action, -1.0, 1.0)
+
         player.apply_force_to_player(PLAYER_FORCE_LIMIT * action[0],
                                      PLAYER_FORCE_LIMIT * action[1])
         if self.message_dims_number:

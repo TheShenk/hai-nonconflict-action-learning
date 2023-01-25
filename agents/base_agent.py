@@ -22,10 +22,17 @@ class BaseAgent:
                  state: Optional[Tuple[np.ndarray, ...]] = None,
                  episode_start: Optional[np.ndarray] = None,
                  deterministic: bool = False):
+
+        marl_env = isinstance(self.env.observation_space, list)
+
         # Проверка на то, является ли текущая среда векторной. Это не может быть isinstanceof(..., VecEnv), так как
         # при обучении используется evaluate_policy, которая не заменяет текущую среду. Обычная нейронная сеть
         # в таком случае полагается на политики, которые это как-то учитывают.
-        if observation.ndim > len(self.env.observation_space.shape):
+        # TODO: Вроде, MAEvaluateCallback теперь всегда использует DummyVecEnv. Нужно проверить и, скорее всего,
+        #  заменить эту проверку
+        vec_env = not marl_env and observation.ndim > len(self.env.observation_space.shape)
+
+        if vec_env:
             actions = []
             for i in range(observation.shape[0]):
                 action = self._predict(observation[i], episode_start=episode_start)

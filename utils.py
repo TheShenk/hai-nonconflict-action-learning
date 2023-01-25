@@ -26,9 +26,11 @@ class BaseVisualizer:
         ob = self.env.reset()
         done = False
         total_reward = 0
-        while not done:
+        while not np.any(done):
             action, _states = model.predict(ob)
             ob, reward, done, info = self.env.step(action)
+            if isinstance(reward, list):
+                reward = np.average(reward)
             self.visualize(reward)
             total_reward += reward
         return total_reward
@@ -142,3 +144,19 @@ def plot_eval_results(eval_log_dir: str):
     plt.xlabel("Evaluation timesteps")
     plt.ticklabel_format(style='plain')
     plt.tight_layout()
+
+class MARLBenchmarkProxy:
+
+    def __init__(self, runner):
+        self.runner = runner
+
+    def predict(self, obs):
+        obs = np.array(obs)
+        actions = []
+        for policy in self.runner.policies.values():
+            act, _ = policy.get_actions(obs)
+            if not isinstance(act, np.ndarray):
+                act = act.cpu().detach().numpy()
+            print(act)
+            actions.append(act)
+        return actions
