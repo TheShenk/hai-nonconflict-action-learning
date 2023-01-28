@@ -44,6 +44,8 @@ class MAEvalCallback(MACallback):
                  deterministic: bool = False):
 
         super().__init__()
+        self.std_reward = 0
+        self.mean_reward = 0
         self.max_reward = float("-inf")
 
         if not isinstance(eval_env, VecEnv):
@@ -81,11 +83,11 @@ class MAEvalCallback(MACallback):
                 deterministic=self.deterministic
             )
 
-            mean_reward, std_reward = np.mean(episode_rewards), np.std(episode_rewards)
+            self.mean_reward, self.std_reward = np.mean(episode_rewards), np.std(episode_rewards)
             mean_ep_length = np.mean(episode_lengths)
 
-            if mean_reward > self.max_reward:
-                self.max_reward = mean_reward
+            if self.mean_reward > self.max_reward:
+                self.max_reward = self.mean_reward
                 if self.model_save_path:
                     self.model.save(f"{self.model_save_path}/best")
 
@@ -101,7 +103,7 @@ class MAEvalCallback(MACallback):
                     ep_lengths=self.evaluations_length,
                 )
 
-            self.logger.record("eval/mean_reward", float(mean_reward))
+            self.logger.record("eval/mean_reward", float(self.mean_reward))
             self.logger.record("eval/mean_ep_length", mean_ep_length)
 
             # Dump log so the evaluation results are printed with the correct timestep

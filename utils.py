@@ -157,6 +157,5 @@ class MARLBenchmarkProxy:
             act, _ = policy.get_actions(obs)
             if not isinstance(act, np.ndarray):
                 act = act.cpu().detach().numpy()
-            print(act)
             actions.append(act)
         return actions
