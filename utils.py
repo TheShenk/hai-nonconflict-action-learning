@@ -153,9 +153,9 @@ class MARLBenchmarkProxy:
     def predict(self, obs):
         obs = np.array(obs)
         actions = []
-        for policy in self.runner.policies.values():
-            act, _ = policy.get_actions(obs)
+        for policy_index, policy in enumerate(self.runner.policies.values()):
+            act, _ = policy.get_actions(obs[policy_index])
             if not isinstance(act, np.ndarray):
                 act = act.cpu().detach().numpy()
             actions.append(act)
-        return actions
+        return actions, None
