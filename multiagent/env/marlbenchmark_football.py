@@ -18,7 +18,7 @@ class MARLBenchmarkFootball(Futbol):
     def __init__(self, total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0,
+                 team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
                  is_out_rule_enabled=True):
         super().__init__(total_time=total_time,
                          debug=debug,
@@ -28,6 +28,7 @@ class MARLBenchmarkFootball(Futbol):
                          random_position=random_position,
                          team_reward_coeff=team_reward_coeff,
                          ball_reward_coeff=ball_reward_coeff,
+                         goal_reward=goal_reward,
                          message_dims_number=message_dims_number,
                          is_out_rule_enabled=is_out_rule_enabled)
 
@@ -52,9 +53,8 @@ class MARLBenchmarkFootball(Futbol):
 
     def step(self, action):
         obs, rew, done, info = super().step(action)
+
         return ([obs,] * self.number_of_player,
                 [[rew,],] * self.number_of_player,
                 [[done,],] * self.number_of_player,
                 info)
-
-

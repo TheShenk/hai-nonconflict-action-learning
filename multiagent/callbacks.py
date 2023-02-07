@@ -45,8 +45,8 @@ class MAEvalCallback(MACallback):
 
         super().__init__()
         self.std_reward = 0
-        self.mean_reward = 0
-        self.max_reward = float("-inf")
+        self.mean_reward = -np.inf
+        self.max_reward = -np.inf
 
         if not isinstance(eval_env, VecEnv):
             eval_env = DummyVecEnv([lambda: eval_env])

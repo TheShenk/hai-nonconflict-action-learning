@@ -13,11 +13,11 @@ class TwoSideFootball(Futbol):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0,
+                 team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
                  is_out_rule_enabled=True):
         super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
-                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, message_dims_number,
-                         is_out_rule_enabled)
+                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, goal_reward,
+                         message_dims_number, is_out_rule_enabled)
 
         self.ball_owner_side = random.choice(["left", "right"])
         self.out = None
@@ -57,14 +57,12 @@ class TwoSideFootball(Futbol):
 
         if self.ball_contact_goal():
             bx, _ = self.ball.get_position()
-
-            goal_reward = 1000
             is_in_left_goal = bx > self.width // 2
 
             if team == self.team_A:
-                reward += goal_reward if is_in_left_goal else -goal_reward
+                reward += self.goal_reward if is_in_left_goal else -self.goal_reward
             else:
-                reward += -goal_reward if is_in_left_goal else goal_reward
+                reward += -self.goal_reward if is_in_left_goal else self.goal_reward
 
         return reward
 
@@ -106,11 +104,12 @@ class AttackingVsGoalkeeper(TwoSideFootball):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=1, message_dims_number=0,
-                 is_out_rule_enabled=True):
+                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=1, goal_reward=1000,
+                 message_dims_number=0, is_out_rule_enabled=True):
         super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
-                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, message_dims_number,
-                         is_out_rule_enabled)
+                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, goal_reward,
+                         message_dims_number, is_out_rule_enabled)
+
         self.goalkeeper_init_pos = self.get_goalkeeper().get_position()
         self.goalkeeper_reward_coeff = goalkeeper_reward_coeff
         self.goalkeeper_goal_pos = self.goal_position[self.team_A].copy()
@@ -131,19 +130,17 @@ class AttackingVsGoalkeeper(TwoSideFootball):
         reward = 0
 
         ball_position = self.ball.get_position()
-        on_right_side = ball_position[0] < self.width // 2
-
         goalkeeper_pos = self.get_goalkeeper().get_position()
 
         # get reward
         if not self.out:
-            reward -= self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_A])
+            reward += self.get_ball_reward(self.ball_init, ball_position, self.goal_position[self.team_B])
             reward += self.get_goalkeeper_reward(self.goalkeeper_init_pos, goalkeeper_pos, self.goalkeeper_goal_pos)
 
         self.goalkeeper_init_pos = goalkeeper_pos
 
-        if self.ball_contact_goal() and on_right_side:
-            goal_reward = 1000
-            reward -= goal_reward
+        ball_on_right_side = ball_position[0] < self.width // 2
+        if self.ball_contact_goal() and ball_on_right_side:
+            reward -= self.goal_reward
 
         return reward
