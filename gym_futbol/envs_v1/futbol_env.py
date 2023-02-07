@@ -70,7 +70,7 @@ class Futbol(gym.Env):
                  total_time=TOTAL_TIME, debug=False,
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="multi-discrete", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, message_dims_number=0,
+                 team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
                  is_out_rule_enabled=True):
 
         self.width = width
@@ -85,6 +85,7 @@ class Futbol(gym.Env):
 
         self.ball_to_goal_reward_coefficient = ball_reward_coeff
         self.run_to_ball_reward_coefficient = team_reward_coeff
+        self.goal_reward = goal_reward
 
         PLAYER_max_arr = np.array(
             [WIDTH + padding, HEIGHT, PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY] + [1, ] * self.message_dims_number)
@@ -365,8 +366,6 @@ class Futbol(gym.Env):
 
     def _process_box_action(self, player, action):
 
-        action = np.clip(action, -1.0, 1.0)
-
         player.apply_force_to_player(PLAYER_FORCE_LIMIT * action[0],
                                      PLAYER_FORCE_LIMIT * action[1])
         if self.message_dims_number:
@@ -553,10 +552,8 @@ class Futbol(gym.Env):
         if self.ball_contact_goal():
             bx, _ = self.ball.get_position()
 
-            goal_reward = 1000
-
-            reward[0] += goal_reward if bx > self.width - 2 else -goal_reward
-            reward[1] += -goal_reward if bx > self.width - 2 else goal_reward
+            reward[0] += self.goal_reward if bx > self.width - 2 else -self.goal_reward
+            reward[1] += -self.goal_reward if bx > self.width - 2 else self.goal_reward
 
             self._position_to_initial()
             self.ball_owner_side = random.choice(["left", "right"])
