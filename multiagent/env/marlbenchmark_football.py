@@ -19,7 +19,9 @@ class MARLBenchmarkFootball(Futbol):
                  number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
                  action_space_type="box", random_position=False,
                  team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
-                 is_out_rule_enabled=True):
+                 is_out_rule_enabled=True, normalize=False):
+
+        self.normalized_env = gym.wrappers.NormalizeReward(super()) if normalize else super()
         super().__init__(total_time=total_time,
                          debug=debug,
                          number_of_player=number_of_player,
@@ -48,11 +50,11 @@ class MARLBenchmarkFootball(Futbol):
         self.action_space = [gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)),] * number_of_player
 
     def reset(self):
-         obs = super().reset()
+         obs = self.normalized_env.reset()
          return [obs,] * self.number_of_player
 
     def step(self, action):
-        obs, rew, done, info = super().step(action)
+        obs, rew, done, info = self.normalized_env.step(action)
 
         return ([obs,] * self.number_of_player,
                 [[rew,],] * self.number_of_player,
