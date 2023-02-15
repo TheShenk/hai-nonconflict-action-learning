@@ -70,7 +70,8 @@ class MultiModelAgent(BaseAgent):
         if callback is None:
             callback = MACallback()
 
-        observations, dones = [self.env.reset(),]*len(self.models), np.ones((self.env.num_envs,))
+        total_models_count = len(self.models) + len(self.static_models)
+        observations, dones = [self.env.reset(),] * total_models_count, np.ones((self.env.num_envs,))
 
         self.time = 0
 
@@ -115,18 +116,18 @@ class MultiModelAgent(BaseAgent):
 
         models_count = len(self.models)
         static_models_count = len(self.static_models)
+        total_models_count = models_count+static_models_count
 
         sample_actions_results = []
         for model_index in range(models_count):
             sample_actions_results.append(self.models[model_index].sample_action())
         for s_model_index in range(static_models_count):
             model_observation = observations[models_count+s_model_index]
-            sample_actions_results.append(self.static_models[s_model_index].predict(model_observation, done))
+            sample_actions_results.append(self.static_models[s_model_index].predict(model_observation, episode_start=done))
 
         actions = tuple(map(lambda x: x[0], sample_actions_results))
         total_action = self.vec_actions_combiner(actions)
 
         next_observation, reward, done, info = self.env.step(total_action)
 
-        # TODO: Нужно ли здесь использовать models_count+static_models_count?
-        return [next_observation,] * models_count, [reward,] * models_count, done, info, sample_actions_results
+        return [next_observation,] * total_models_count, [reward,] * total_models_count, done, info, sample_actions_results
