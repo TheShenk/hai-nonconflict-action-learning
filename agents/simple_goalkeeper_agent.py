@@ -45,6 +45,6 @@ class SimpleGoalkeeperAgent(BaseAgent):
             return [np.append(np.append(
                 to_ball_vector / to_ball_distance,
                 ball_enemy_goal_vector / ball_enemy_goal_distance
-            ), [0, ] * self.message_dims_number)]
+            ), [1, ] * self.message_dims_number)]
         else:
-            return [np.append(to_goal_vector / to_goal_distance, [[0, 0] + [0,] * self.message_dims_number])]
+            return [np.append(to_goal_vector / to_goal_distance, [[0, 0] + [1,] * self.message_dims_number])]
