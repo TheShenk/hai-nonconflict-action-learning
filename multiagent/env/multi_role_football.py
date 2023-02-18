@@ -14,7 +14,7 @@ class MultiRoleFootball(gym.Env):
         self.observation_space = self.env.observation_space
 
         if self.env.action_space_type[0] == "box":
-            self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(1, 4))
+            self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(1, 4 + self.env.message_dims_number))
         elif self.env.action_space_type[0] == "multi-discrete":
             self.action_space = gym.spaces.Discrete(5)
 
