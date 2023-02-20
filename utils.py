@@ -47,6 +47,7 @@ class PygameVisualizer(BaseVisualizer):
     def __init__(self, env, res, fps=60):
         super().__init__(env)
         pygame.init()
+        pygame.key.set_repeat(1, 1)
         self.surface = pygame.display.set_mode(res)
         self.clock = pygame.time.Clock()
 
