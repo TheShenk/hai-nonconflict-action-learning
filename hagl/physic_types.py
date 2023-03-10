@@ -6,6 +6,7 @@ import numpy as np
 from hagl.base_types import HAGLType, compile_type
 from hagl.template import get_template, Template, DIMENSIONS_TEMPLATE_NAME
 
+COORD_NAMES = ['x', 'y', 'z', 'w']
 
 class Velocity(HAGLType):
 
@@ -16,12 +17,21 @@ class Velocity(HAGLType):
 
     @staticmethod
     def construct(gym_value: np.ndarray):
-        # TODO: Используя x, y и z поддерживаем только 2D и 3D, добавить также обращение через массив?
+        # TODO: Используя x, y, z, ... поддерживаем ограниченное число измерений, добавить также обращение через массив?
         value = Velocity()
-        coord_names = ['x', 'y', 'z', 'w']
-        for coord_n, coord_v in zip(coord_names, gym_value):
+        for coord_n, coord_v in zip(COORD_NAMES, gym_value):
             setattr(value, coord_n, coord_v)
         return value
+
+    @staticmethod
+    def deconstruct(hagl_value):
+        value = []
+        for coord_n in COORD_NAMES:
+            if hasattr(hagl_value, coord_n):
+                coord_v = getattr(hagl_value, coord_n)
+                value.append(coord_v)
+
+        return np.array(value)
 
 class Position(HAGLType):
 
@@ -32,9 +42,18 @@ class Position(HAGLType):
 
     @staticmethod
     def construct(gym_value: np.ndarray):
-        # TODO: Используя x, y и z поддерживаем только 2D и 3D, добавить также обращение через массив?
+        # TODO: Используя x, y, z, ... поддерживаем ограниченное число измерений, добавить также обращение через массив?
         value = Position()
-        coord_names = ['x', 'y', 'z', 'w']
-        for coord_n, coord_v in zip(coord_names, gym_value):
+        for coord_n, coord_v in zip(COORD_NAMES, gym_value):
             setattr(value, coord_n, coord_v)
         return value
+
+    @staticmethod
+    def deconstruct(hagl_value):
+        value = []
+        for coord_n in COORD_NAMES:
+            if hasattr(hagl_value, coord_n):
+                coord_v = getattr(hagl_value, coord_n)
+                value.append(coord_v)
+
+        return np.array(value)

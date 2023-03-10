@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import gymnasium
 
 class HAGLType:
@@ -48,3 +50,18 @@ def construct(hagl_type, gym_dict_value):
         setattr(constructed_value, field_name, constructed_field_value)
 
     return constructed_value
+
+def deconstruct(hagl_type, hagl_value):
+
+    if is_base_hagl_type(hagl_type):
+        return hagl_type.deconstruct(hagl_value)
+
+    type_vars = allowed_vars(hagl_type)
+    deconstructed_value = OrderedDict()
+
+    for field_name in type_vars:
+        field_type = type_vars[field_name]
+        deconstructed_field_value = deconstruct(field_type, getattr(hagl_value, field_name))
+        deconstructed_value[field_name] = deconstructed_field_value
+
+    return deconstructed_value

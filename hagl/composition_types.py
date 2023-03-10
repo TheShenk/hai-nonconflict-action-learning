@@ -23,3 +23,8 @@ class Array(HAGLType):
 
         value = [hagl.construct(self.inner_type, t_value) for t_value in gym_value]
         return value
+
+    def deconstruct(self, hagl_value):
+
+        value = map(lambda v: hagl.deconstruct(self.inner_type, v), hagl_value)
+        return tuple(value)
