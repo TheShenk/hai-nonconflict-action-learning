@@ -3,18 +3,27 @@ import gymnasium
 class HAGLType:
     pass
 
+def is_base_hagl_type(val):
+    if type(val) == type:
+        return issubclass(val, HAGLType)
+    else:
+        return issubclass(type(val), HAGLType)
+
+def allowed_vars(hagl_type):
+    type_vars = vars(hagl_type)
+    return {name: value for name, value in type_vars.items() if not name.startswith("__")}
+
 def compile_type(hagl_type, template_values):
 
-    if hasattr(hagl_type, "gym_type"):
+    if is_base_hagl_type(hagl_type):
         return hagl_type.gym_type(template_values)
 
-    type_vars = vars(hagl_type)
+    type_vars = allowed_vars(hagl_type)
     compiled_type = gymnasium.spaces.Dict()
 
     for field_name in type_vars:
-        if not field_name.startswith("__"):
-            field_value = type_vars[field_name]
-            compiled_type[field_name] = compile_type(field_value, template_values)
+        field_value = type_vars[field_name]
+        compiled_type[field_name] = compile_type(field_value, template_values)
 
     return compiled_type
 
@@ -24,3 +33,18 @@ def compile(observation, action, template_values):
     compiled_action = compile_type(action, template_values)
 
     return compiled_observation, compiled_action
+
+def construct(hagl_type, gym_dict_value):
+
+    if is_base_hagl_type(hagl_type):
+        return hagl_type.construct(gym_dict_value)
+
+    type_vars = allowed_vars(hagl_type)
+    constructed_value = hagl_type()
+
+    for field_name in type_vars:
+        field_type = type_vars[field_name]
+        constructed_field_value = construct(field_type, gym_dict_value[field_name])
+        setattr(constructed_value, field_name, constructed_field_value)
+
+    return constructed_value
