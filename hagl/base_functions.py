@@ -37,8 +37,12 @@ def compile_type(hagl_type, template_values):
 
 
 def compile(observation, action, template_values):
-    compiled_observation = compile_type(observation, template_values)
-    compiled_action = compile_type(action, template_values)
+
+    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+    hagl_template_values.update(template_values)
+
+    compiled_observation = compile_type(observation, hagl_template_values)
+    compiled_action = compile_type(action, hagl_template_values)
 
     return compiled_observation, compiled_action
 

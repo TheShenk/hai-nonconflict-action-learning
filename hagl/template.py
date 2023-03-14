@@ -1,6 +1,9 @@
 from hagl.base_types import HAGLType
 
 DIMENSIONS_TEMPLATE_NAME = "dimensions"
+DEFAULT_TEMPLATE_VALUES = {
+    DIMENSIONS_TEMPLATE_NAME: 2
+}
 
 class Template(HAGLType):
 
