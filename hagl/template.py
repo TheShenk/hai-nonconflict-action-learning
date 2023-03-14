@@ -17,3 +17,5 @@ def get_template(template_value, template_dict):
     if isinstance(template_value, Template):
         return template_dict[template_value.name()]
     return template_value
+
+T = Template

@@ -3,7 +3,7 @@ import gymnasium
 
 import hagl
 from hagl import HAGLType, get_template
-from hagl.base_types import compile_type, construct
+from hagl.base_functions import compile_type
 
 
 class Array(HAGLType):

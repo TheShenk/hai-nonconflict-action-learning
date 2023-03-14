@@ -3,7 +3,7 @@ from abc import abstractmethod
 import gymnasium
 import numpy as np
 
-from hagl.base_types import HAGLType, compile_type
+from hagl.base_types import HAGLType
 from hagl.template import get_template, Template, DIMENSIONS_TEMPLATE_NAME
 
 COORD_NAMES = ['x', 'y', 'z', 'w']
