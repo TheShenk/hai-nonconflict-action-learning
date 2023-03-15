@@ -22,9 +22,12 @@ def try_as_syntax_shugar(val):
     return val
 
 
+def isfunction(obj):
+    return callable(obj) and not isinstance(obj, type)
+
 def allowed_vars(hagl_type):
     type_vars = vars(hagl_type)
-    return {name: value for name, value in type_vars.items() if not name.startswith("__")}
+    return {name: value for name, value in type_vars.items() if (not name.startswith("__")) and (not isfunction(value))}
 
 
 def compile_type(hagl_type, template_values):
