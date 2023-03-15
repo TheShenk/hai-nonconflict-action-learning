@@ -1,8 +1,15 @@
+import enum
+
 from hagl.base_types import HAGLType
 
 DIMENSIONS_TEMPLATE_NAME = "dimensions"
+
+ENUM_GYM_CONVERSION_TEMPLATE_NAME = "enum_gym_conversion"
+EnumGymConversion = enum.IntEnum("EnumGymConversion", ["Discrete", "Box"])
+
 DEFAULT_TEMPLATE_VALUES = {
-    DIMENSIONS_TEMPLATE_NAME: 2
+    DIMENSIONS_TEMPLATE_NAME: 2,
+    ENUM_GYM_CONVERSION_TEMPLATE_NAME: EnumGymConversion.Discrete
 }
 
 class Template(HAGLType):
