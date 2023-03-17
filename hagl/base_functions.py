@@ -25,9 +25,21 @@ def try_as_syntax_shugar(val):
 def isfunction(obj):
     return callable(obj) and not isinstance(obj, type)
 
-def allowed_vars(hagl_type):
-    type_vars = vars(hagl_type)
-    return {name: value for name, value in type_vars.items() if (not name.startswith("__")) and (not isfunction(value))}
+def allowed_var(name, value):
+    return (not name.startswith("__")) and (not isfunction(value))
+
+def get_hagl_vars(hagl_type):
+
+    type_vars = {}
+
+    # [:-1] - берем массив без Object
+    # reversed - что бы правильно учесть переопределение в наследнике
+    base_types_list = reversed(hagl_type.mro()[:-1])
+    for base_type in base_types_list:
+        base_type_vars = vars(base_type)
+        allowed_base_type_vars = {name: value for name, value in base_type_vars.items() if allowed_var(name, value)}
+        type_vars.update(allowed_base_type_vars)
+    return type_vars
 
 
 def compile_type(hagl_type, template_values):
@@ -36,7 +48,7 @@ def compile_type(hagl_type, template_values):
     if is_base_hagl_type(hagl_type):
         return hagl_type.gym_type(template_values)
 
-    type_vars = allowed_vars(hagl_type)
+    type_vars = get_hagl_vars(hagl_type)
     compiled_type = gymnasium.spaces.Dict()
 
     for field_name in type_vars:
@@ -63,7 +75,7 @@ def _construct(hagl_type, gym_dict_value, template_values):
     if is_base_hagl_type(hagl_type):
         return hagl_type.construct(gym_dict_value, template_values)
 
-    type_vars = allowed_vars(hagl_type)
+    type_vars = get_hagl_vars(hagl_type)
     constructed_value = hagl_type()
 
     for field_name in type_vars:
@@ -80,7 +92,7 @@ def _deconstruct(hagl_type, hagl_value, template_values):
     if is_base_hagl_type(hagl_type):
         return hagl_type.deconstruct(hagl_value, template_values)
 
-    type_vars = allowed_vars(hagl_type)
+    type_vars = get_hagl_vars(hagl_type)
     deconstructed_value = OrderedDict()
 
     for field_name in type_vars:
