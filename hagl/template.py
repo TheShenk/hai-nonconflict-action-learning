@@ -7,9 +7,13 @@ DIMENSIONS_TEMPLATE_NAME = "dimensions"
 ENUM_GYM_CONVERSION_TEMPLATE_NAME = "enum_gym_conversion"
 EnumGymConversion = enum.IntEnum("EnumGymConversion", ["Discrete", "Box"])
 
+BOOL_GYM_CONVERSION_TEMPLATE_NAME = "bool_gym_conversion"
+BoolGymConversion = enum.IntEnum("BoolGymConversion", ["Discrete", "Box"])
+
 DEFAULT_TEMPLATE_VALUES = {
     DIMENSIONS_TEMPLATE_NAME: 2,
-    ENUM_GYM_CONVERSION_TEMPLATE_NAME: EnumGymConversion.Discrete
+    ENUM_GYM_CONVERSION_TEMPLATE_NAME: EnumGymConversion.Discrete,
+    BOOL_GYM_CONVERSION_TEMPLATE_NAME: BoolGymConversion.Box
 }
 
 class Template(HAGLType):

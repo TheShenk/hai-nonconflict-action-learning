@@ -19,6 +19,10 @@ def try_as_syntax_shugar(val):
         return hagl.composition_types.Array(val[0], val[1])
     elif isinstance(val, enum.EnumMeta):
         return hagl.enum_type.Enum(val)
+    elif val == float:
+        return hagl.python_types.Float
+    elif val == bool:
+        return hagl.python_types.Bool
     return val
 
 
