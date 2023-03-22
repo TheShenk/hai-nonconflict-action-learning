@@ -1,0 +1,2 @@
+class LimitViolation(Exception):
+    pass

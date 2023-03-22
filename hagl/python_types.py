@@ -1,4 +1,5 @@
 import gymnasium.spaces
+import numpy as np
 
 import hagl
 from hagl import get_template, Template
@@ -17,7 +18,7 @@ class Float(hagl.HAGLType):
 
     @staticmethod
     def deconstruct(hagl_value, template_values):
-        return [hagl_value]
+        return np.array([hagl_value])
 
 
 class Bool(hagl.HAGLType):
