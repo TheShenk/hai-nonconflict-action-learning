@@ -20,21 +20,11 @@ class Enum(HAGLType):
         if conversion_type == EnumGymConversion.Discrete:
             return gymnasium.spaces.Discrete(len(self.python_enum))
         elif conversion_type == EnumGymConversion.Box:
-            return gymnasium.spaces.Box(low=1.0, high=len(self.python_enum))
+            return gymnasium.spaces.Box(low=0.0, high=len(self.python_enum)-1)
 
     def construct(self, gym_value, template_values):
-        conversion_type = get_template(Template(ENUM_GYM_CONVERSION_TEMPLATE_NAME), template_values)
-
-        value = gym_value + 1
-        if conversion_type == EnumGymConversion.Box:
-            value = int(gym_value)
-
+        value = int(gym_value + 1)
         return self.python_enum(value)
 
     def deconstruct(self, hagl_value, template_values):
-        conversion_type = get_template(Template(ENUM_GYM_CONVERSION_TEMPLATE_NAME), template_values)
-
-        if conversion_type == EnumGymConversion.Discrete:
-            return int(hagl_value - 1)
-        elif conversion_type == EnumGymConversion.Box:
-            return int(hagl_value)
+        return int(hagl_value - 1)
