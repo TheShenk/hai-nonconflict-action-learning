@@ -109,8 +109,8 @@ def construct(hagl_type, gym_dict_value, template_values):
     return _construct(hagl_type, gym_dict_value, hagl_template_values)
 
 
-def deconstruct(hagl_type, gym_dict_value, template_values):
+def deconstruct(hagl_type, hagl_value, template_values):
 
     hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
-    return _deconstruct(hagl_type, gym_dict_value, hagl_template_values)
+    return _deconstruct(hagl_type, hagl_value, hagl_template_values)
