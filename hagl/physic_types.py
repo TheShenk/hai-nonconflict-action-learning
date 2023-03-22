@@ -11,6 +11,25 @@ ARRAY_ACCESS_NAME = "array"
 
 class Vector(HAGLType):
 
+    @staticmethod
+    def gym_type(template_values):
+        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
+        return gymnasium.spaces.Box(low=-1.0, high=1.0, shape=(t_dimensions_count,))
+
+    @classmethod
+    def construct(cls, gym_value: np.ndarray, template_values):
+        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
+
+        value = cls()
+        for dimension_index in range(t_dimensions_count):
+            setattr(value, COORD_NAMES[dimension_index], gym_value[dimension_index])
+        setattr(value, ARRAY_ACCESS_NAME, gym_value[:t_dimensions_count])
+        return value
+
+    @staticmethod
+    def deconstruct(hagl_value, template_values):
+        return np.array(getattr(hagl_value, ARRAY_ACCESS_NAME))
+
     def __add__(self, other):
         value = Vector()
         self_array_values = getattr(self, ARRAY_ACCESS_NAME)
@@ -23,43 +42,8 @@ class Vector(HAGLType):
         return value
 
 class Velocity(Vector):
+    pass
 
-    @staticmethod
-    def gym_type(template_values):
-        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
-        return gymnasium.spaces.Box(low=-1.0, high=1.0, shape=(t_dimensions_count,))
-
-    @staticmethod
-    def construct(gym_value: np.ndarray, template_values):
-        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
-
-        value = Velocity()
-        for dimension_index in range(t_dimensions_count):
-            setattr(value, COORD_NAMES[dimension_index], gym_value[dimension_index])
-        setattr(value, ARRAY_ACCESS_NAME, gym_value[:t_dimensions_count])
-        return value
-
-    @staticmethod
-    def deconstruct(hagl_value, template_values):
-        return np.array(getattr(hagl_value, ARRAY_ACCESS_NAME))
 
 class Position(Vector):
-
-    @staticmethod
-    def gym_type(template_values):
-        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
-        return gymnasium.spaces.Box(low=-1.0, high=1.0, shape=(t_dimensions_count,))
-
-    @staticmethod
-    def construct(gym_value: np.ndarray, template_values):
-        t_dimensions_count = get_template(Template(DIMENSIONS_TEMPLATE_NAME), template_values)
-
-        value = Position()
-        for dimension_index in range(t_dimensions_count):
-            setattr(value, COORD_NAMES[dimension_index], gym_value[dimension_index])
-        setattr(value, ARRAY_ACCESS_NAME, gym_value[:t_dimensions_count])
-        return value
-
-    @staticmethod
-    def deconstruct(hagl_value, template_values):
-        return np.array(getattr(hagl_value, ARRAY_ACCESS_NAME))
+    pass
