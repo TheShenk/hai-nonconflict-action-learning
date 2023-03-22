@@ -15,7 +15,9 @@ def is_base_hagl_type(val):
 
 
 def try_as_syntax_shugar(val):
-    if isinstance(val, list) and len(val) == 2:
+    if isinstance(val, list):
+        assert len(val) == 2, "In HAGL types list can be used only for creating Array type. First element - type, " \
+                              "second - number of elements of the specified type"
         return hagl.composition_types.Array(val[0], val[1])
     elif isinstance(val, enum.EnumMeta):
         return hagl.enum_type.Enum(val)
