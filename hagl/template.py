@@ -1,5 +1,6 @@
 import enum
 
+import hagl
 from hagl.base_types import HAGLType
 
 DIMENSIONS_TEMPLATE_NAME = "dimensions"
@@ -25,11 +26,15 @@ class Template(HAGLType):
         return self.template_name
 
     def gym_type(self, template_values):
-        return template_values[self.template_name]
+        return get_template(self, template_values)
 
-def get_template(template_value, template_dict):
+def get_template(template_value, template_dict: dict):
     if isinstance(template_value, Template):
-        return template_dict[template_value.name()]
+        template_name = template_value.name()
+        if template_name in template_dict:
+            return template_dict[template_name]
+        else:
+            raise hagl.exceptions.TemplateException(f"Can't find template parameter with name {template_name}")
     return template_value
 
 T = Template

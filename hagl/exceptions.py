@@ -3,3 +3,6 @@ class LimitViolation(Exception):
 
 class EnumException(Exception):
     pass
+
+class TemplateException(Exception):
+    pass
