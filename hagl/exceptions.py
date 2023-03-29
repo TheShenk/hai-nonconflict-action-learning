@@ -9,3 +9,6 @@ class TemplateException(Exception):
 
 class ProxyException(Exception):
     pass
+
+class PhysicException(Exception):
+    pass
