@@ -1,12 +1,11 @@
 import gymnasium.spaces
 import numpy as np
 
-import hagl
-from hagl import get_template, Template
-from hagl.template import BOOL_GYM_CONVERSION_TEMPLATE_NAME, BoolGymConversion
+from hagl.base_types import HAGLType
+from hagl.template import get_template, Template, BOOL_GYM_CONVERSION_TEMPLATE_NAME, BoolGymConversion
 
 
-class Float(hagl.HAGLType):
+class Float(HAGLType):
 
     @staticmethod
     def gym_type(template_values):
@@ -21,7 +20,7 @@ class Float(hagl.HAGLType):
         return np.array([hagl_value])
 
 
-class Bool(hagl.HAGLType):
+class Bool(HAGLType):
 
     @staticmethod
     def gym_type(template_values):
