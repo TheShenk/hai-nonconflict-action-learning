@@ -6,3 +6,6 @@ class EnumException(Exception):
 
 class TemplateException(Exception):
     pass
+
+class ProxyException(Exception):
+    pass
