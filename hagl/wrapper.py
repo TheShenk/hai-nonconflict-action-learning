@@ -6,12 +6,13 @@ from gymnasium.core import WrapperActType, WrapperObsType
 import hagl
 
 
-class HAGLWrapper(gymnasium.Wrapper):
+class HAGLWrapper(gymnasium.Env):
 
-    def __init__(self, env: gymnasium.Env, action_space, observation_space, template_values):
-        super().__init__(env)
+    def __init__(self, env, template_values):
+        super().__init__()
 
-        self.hagl_action_space, self.hagl_observation_space = action_space, observation_space
+        self.env = env
+        self.hagl_action_space, self.hagl_observation_space = self.env.action_space, self.env.observation_space
         self.template_values = template_values
 
         self.gymnasium_action_space, self.gymnasium_observation_space \
@@ -24,7 +25,9 @@ class HAGLWrapper(gymnasium.Wrapper):
 
         gymnasium_action = gymnasium.spaces.unflatten(self.gymnasium_action_space, action)
         hagl_action = hagl.construct(self.hagl_action_space, gymnasium_action, self.template_values)
-        hagl_observation, reward, terminated, truncated, info = self.env.step(hagl_action)
+        hagl_observation, reward, terminated, truncated, info, template_values = self.env.step(hagl_action)
+
+        self.template_values.update(template_values)
         gymnasium_observation = hagl.deconstruct(self.hagl_observation_space, hagl_observation, self.template_values)
         observation = gymnasium.spaces.flatten(self.gymnasium_observation_space, gymnasium_observation)
 
