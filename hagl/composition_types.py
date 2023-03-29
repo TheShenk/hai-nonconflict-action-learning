@@ -1,5 +1,6 @@
 import gym.spaces
 import gymnasium
+import numpy as np
 
 import hagl
 from hagl import HAGLType, get_template
@@ -38,3 +39,36 @@ class Array(HAGLType):
 
         value = map(lambda v: hagl.deconstruct(t_inner_type, v, template_values), hagl_value)
         return tuple(value)
+
+class EnableIf(HAGLType):
+
+    def __init__(self, inner_type, enabled):
+        self.inner_type = inner_type
+        self.enabled = enabled
+
+    def gym_type(self, template_values):
+        t_inner_type = get_template(self.inner_type, template_values)
+        t_enabled = get_template(self.enabled, template_values)
+
+        if t_enabled:
+            return compile_type(t_inner_type, template_values)
+        else:
+            return gymnasium.spaces.Box(shape=(0,), low=np.array([]), high=np.array([]))
+
+    def construct(self, gym_value, template_values):
+        t_inner_type = get_template(self.inner_type, template_values)
+        t_enabled = get_template(self.enabled, template_values)
+
+        if t_enabled:
+            return hagl.construct(t_inner_type, gym_value, template_values)
+        else:
+            return None
+
+    def deconstruct(self, hagl_value, template_values):
+        t_inner_type = get_template(self.inner_type, template_values)
+        t_enabled = get_template(self.enabled, template_values)
+
+        if t_enabled:
+            return hagl.deconstruct(t_inner_type, hagl_value, template_values)
+        else:
+            return np.array([])
