@@ -1,10 +1,11 @@
-from abc import abstractmethod
+import math
 
 import gymnasium
 import numpy as np
 
+from hagl import Float
 from hagl.base_types import HAGLType
-from hagl.template import get_template, Template, DIMENSIONS_TEMPLATE_NAME
+from hagl.template import get_template, Template, DIMENSIONS_TEMPLATE_NAME, ANGLE_UNIT_TEMPLATE_NAME, AngleUnit
 
 COORD_NAMES = ['x', 'y', 'z', 'w']
 ARRAY_ACCESS_NAME = "array"
@@ -46,4 +47,24 @@ class Velocity(Vector):
 
 
 class Position(Vector):
+    pass
+
+class Angle(HAGLType):
+    @staticmethod
+    def gym_type(template_values):
+        angle_unit = get_template(Template(ANGLE_UNIT_TEMPLATE_NAME), template_values)
+        if angle_unit == AngleUnit.Radian:
+            return gymnasium.spaces.Box(low=-math.pi, high=math.pi, shape=(1,))
+        elif angle_unit == AngleUnit.Degree:
+            return gymnasium.spaces.Box(low=--180.0, high=180.0, shape=(1,))
+
+    @staticmethod
+    def construct(gym_value: np.ndarray, template_values):
+        return gym_value[0]
+
+    @staticmethod
+    def deconstruct(hagl_value, template_values):
+        return np.array([hagl_value])
+
+class AngleVelocity(Float):
     pass

@@ -11,10 +11,14 @@ EnumGymConversion = enum.IntEnum("EnumGymConversion", ["Discrete", "Box"])
 BOOL_GYM_CONVERSION_TEMPLATE_NAME = "bool_gym_conversion"
 BoolGymConversion = enum.IntEnum("BoolGymConversion", ["Discrete", "Box"])
 
+ANGLE_UNIT_TEMPLATE_NAME = "angle_unit"
+AngleUnit = enum.IntEnum("AngleUnit", ["Radian", "Degree"])
+
 DEFAULT_TEMPLATE_VALUES = {
     DIMENSIONS_TEMPLATE_NAME: 2,
     ENUM_GYM_CONVERSION_TEMPLATE_NAME: EnumGymConversion.Discrete,
-    BOOL_GYM_CONVERSION_TEMPLATE_NAME: BoolGymConversion.Box
+    BOOL_GYM_CONVERSION_TEMPLATE_NAME: BoolGymConversion.Box,
+    ANGLE_UNIT_TEMPLATE_NAME: AngleUnit.Radian
 }
 
 class Template(HAGLType):
