@@ -37,8 +37,6 @@ class Proxy(HAGLType):
 
 def proxy_vec2d(vec2d):
     vec = Vector()
-    vec.x = vec2d.x
-    vec.y = vec2d.y
     vec.array = [vec2d.x, vec2d.y]
     return vec
 
