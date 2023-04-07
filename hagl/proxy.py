@@ -1,31 +1,10 @@
 from collections import OrderedDict
 
-import gymnasium.spaces
-
 from hagl import HAGLType
-from hagl.base_functions import get_hagl_vars, compile_type, construct, deconstruct
+from hagl.base_functions import get_hagl_vars, compile_type, deconstruct
 from hagl.physic_types import Vector
 from hagl.template import get_template
 from hagl.exceptions import ProxyException
-
-def proxy_box2dvec(box2dvec):
-    vec = Vector()
-    vec.x = box2dvec.x
-    vec.y = box2dvec.y
-    vec.array = [box2dvec.x, box2dvec.y]
-    return vec
-
-def proxy_box2dfloat(box2dfloat):
-    return box2dfloat
-
-Box2DProxy = dict(
-    position=proxy_box2dvec,
-    angle=proxy_box2dfloat,
-    angularDamping=proxy_box2dfloat,
-    angularVelocity=proxy_box2dfloat,
-    linearDamping=proxy_box2dfloat,
-    linearVelocity=proxy_box2dvec
-)
 
 class Proxy(HAGLType):
 
@@ -38,7 +17,7 @@ class Proxy(HAGLType):
         return compile_type(t_target_type, template_values)
 
     def construct(self, gym_value, template_values):
-        raise ProxyException("Construction Box2D from Gymnasium values is not supported")
+        raise ProxyException("Construction Proxy from Gymnasium values is not supported")
 
     def deconstruct(self, box2d_value, template_values):
         t_target_type = get_template(self.target_type, template_values)
@@ -56,7 +35,36 @@ class Proxy(HAGLType):
             result[field_name] = deconstructed_value
         return result
 
+def proxy_vec2d(vec2d):
+    vec = Vector()
+    vec.x = vec2d.x
+    vec.y = vec2d.y
+    vec.array = [vec2d.x, vec2d.y]
+    return vec
+
+def proxy_asis(something):
+    return something
+
+Box2DProxy = dict(
+    position=proxy_vec2d,
+    angle=proxy_asis,
+    angularDamping=proxy_asis,
+    angularVelocity=proxy_asis,
+    linearDamping=proxy_asis,
+    linearVelocity=proxy_vec2d
+)
+
 class HAGLBox2D(Proxy):
 
     def __init__(self, target_type):
         super().__init__(target_type, Box2DProxy)
+
+PyMunkProxy = dict(
+    position=proxy_vec2d,
+    velocity=proxy_vec2d
+)
+
+class HAGLPyMunk(Proxy):
+
+    def __init__(self, target_type):
+        super().__init__(target_type, PyMunkProxy)
