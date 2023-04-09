@@ -1,10 +1,6 @@
-import gym
 import pygame
-from gym import error, spaces
-from gym.utils import seeding
 
 from agents.random_agent import RandomAgent
-from .player import Player
 from .ball import Ball
 from .team import Team
 
@@ -13,7 +9,6 @@ from gym import spaces
 import numpy as np
 import random
 import math
-from pymunk.vec2d import Vec2d
 import pymunk.matplotlib_util
 import pymunk
 import matplotlib.pyplot as plt
@@ -52,6 +47,13 @@ TEAMS_COUNT = 2
 PHYSIC_OBSERVATION_DIMS_NUMBER = 4
 BALLS_COUNT = 1
 
+PLAYER_max_arr = np.array(
+            [WIDTH + padding, HEIGHT, PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY])
+PLAYER_min_arr = np.array(
+            [0 - padding, 0, -PLAYER_MAX_VELOCITY, -PLAYER_MAX_VELOCITY])
+PLAYER_avg_arr = (PLAYER_max_arr + PLAYER_min_arr) / 2
+PLAYER_range_arr = (PLAYER_max_arr - PLAYER_min_arr) / 2
+
 # get the vector pointing from [coor2] to [coor1] and
 # its magnitude
 def get_vec(coor_t, coor_o):
@@ -66,16 +68,11 @@ def inverse_physic_vector_by_x_axis(vector):
 
 
 class Futbol(gym.Env):
-    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
-                 total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
-                 action_space_type="multi-discrete", random_position=False,
+    def __init__(self, total_time=TOTAL_TIME, debug=False,
+                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent, random_position=False,
                  team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
                  is_out_rule_enabled=True):
 
-        self.width = width
-        self.height = height
-        self.player_radius = player_radius
         self.total_time = total_time
         self.debug = debug
         self.number_of_player = number_of_player
@@ -83,36 +80,17 @@ class Futbol(gym.Env):
         self.message_dims_number = message_dims_number
         self.is_out_rule_enabled = is_out_rule_enabled
 
+        self.width = WIDTH
+        self.height = HEIGHT
+
         self.ball_to_goal_reward_coefficient = ball_reward_coeff
         self.run_to_ball_reward_coefficient = team_reward_coeff
         self.goal_reward = goal_reward
 
-        PLAYER_max_arr = np.array(
-            [WIDTH + padding, HEIGHT, PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY] + [1, ] * self.message_dims_number)
-        PLAYER_min_arr = np.array(
-            [0 - padding, 0, -PLAYER_MAX_VELOCITY, -PLAYER_MAX_VELOCITY] + [-1, ] * self.message_dims_number)
-        PLAYER_avg_arr = (PLAYER_max_arr + PLAYER_min_arr) / 2
-        PLAYER_range_arr = (PLAYER_max_arr - PLAYER_min_arr) / 2
-
         self.PLAYER_avg_arr = np.tile(PLAYER_avg_arr, number_of_player)
         self.PLAYER_range_arr = np.tile(PLAYER_range_arr, number_of_player)
 
-        # action space
-        # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
-        # 2) Action Keys: Discrete 5  - noop[0], dash[1], shoot[2], press[3], pass[4] - params: min: 0, max: 4
-        if isinstance(action_space_type, str):
-            self.action_space_type = [action_space_type, action_space_type]
-        else:
-            self.action_space_type = action_space_type
-
-        if self.action_space_type[0] == "discrete":
-            self.action_space = spaces.MultiDiscrete(
-                [25] * self.number_of_player)
-        elif self.action_space_type[0] == "multi-discrete":
-            self.action_space = spaces.MultiDiscrete(
-                [5, 5] * self.number_of_player)
-        elif self.action_space_type[0] == "box":
-            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4 + message_dims_number))
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.number_of_player, 4 + message_dims_number))
 
         # observation space (normalized)
         # [0] x position
@@ -120,10 +98,8 @@ class Futbol(gym.Env):
         # [2] x velocity
         # [3] y velocity
 
-        messages_count = self.number_of_player * TEAMS_COUNT
         physic_objects_count = BALLS_COUNT + self.number_of_player * TEAMS_COUNT
-        total_observation_dims_number = messages_count * message_dims_number \
-                                        + physic_objects_count * PHYSIC_OBSERVATION_DIMS_NUMBER
+        total_observation_dims_number = physic_objects_count * PHYSIC_OBSERVATION_DIMS_NUMBER
 
         self.observation_space = spaces.Box(
             low=-1.0,
@@ -141,11 +117,11 @@ class Futbol(gym.Env):
         self.space.damping = 0.95
 
         # create walls
-        self._setup_walls(width, height)
+        self._setup_walls(WIDTH, HEIGHT)
 
         # Teams
-        self.team_A = Team(self.space, width, height,
-                           player_radius=self.player_radius,
+        self.team_A = Team(self.space, WIDTH, HEIGHT,
+                           player_radius=PLAYER_RADIUS,
                            player_weight=PLAYER_WEIGHT,
                            player_max_velocity=PLAYER_MAX_VELOCITY,
                            color=pygame.Color("red"),  # red
@@ -153,8 +129,8 @@ class Futbol(gym.Env):
                            player_number=self.number_of_player,
                            message_dims_number=self.message_dims_number)
 
-        self.team_B = Team(self.space, width, height,
-                           player_radius=self.player_radius,
+        self.team_B = Team(self.space, WIDTH, HEIGHT,
+                           player_radius=PLAYER_RADIUS,
                            player_weight=PLAYER_WEIGHT,
                            player_max_velocity=PLAYER_MAX_VELOCITY,
                            color=pygame.Color("blue"),  # blue
@@ -168,7 +144,7 @@ class Futbol(gym.Env):
         self.ball = Ball(self.space, self.width * 0.5, self.height * 0.5,
                          mass=BALL_WEIGHT,
                          max_velocity=BALL_MAX_VELOCITY,
-                         radius=ball_radius,
+                         radius=BALL_RADIUS,
                          elasticity=0.2)
 
         self.reset()
@@ -178,9 +154,7 @@ class Futbol(gym.Env):
     def _position_to_initial(self):
 
         self.team_A.set_position_to_initial(self.random_position)
-
         self.team_B.set_position_to_initial(self.random_position)
-
         self.ball.set_position(self.width * 0.5, self.height * 0.5)
 
         # set the ball velocity to zero
@@ -364,7 +338,7 @@ class Futbol(gym.Env):
     def random_action(self):
         return self.action_space.sample()
 
-    def _process_box_action(self, player, action):
+    def _process_action(self, player, action):
 
         player.apply_force_to_player(PLAYER_FORCE_LIMIT * action[0],
                                      PLAYER_FORCE_LIMIT * action[1])
@@ -374,138 +348,8 @@ class Futbol(gym.Env):
             self.ball.apply_force_to_ball(BALL_FORCE_LIMIT*action[2],
                                           BALL_FORCE_LIMIT*action[3])
 
-    def _process_discrete_action(self, player, action):
-
-        # Arrow Keys
-        # Arrow Keys: NOOP
-        force_x, force_y = 0, 0
-        if action[0] == 0:
-            force_x, force_y = 0, 0
-        # Arrow Keys: UP
-        elif action[0] == 1:
-            force_x, force_y = 0, 1
-        # Arrow Keys: RIGHT
-        elif action[0] == 2:
-            force_x, force_y = 1, 0
-        # Arrow Keys: DOWN
-        elif action[0] == 3:
-            force_x, force_y = 0, -1
-        # Arrow Keys: LEFT
-        elif action[0] == 4:
-            force_x, force_y = -1, 0
-        else:
-            print("invalid arrow keys")
-
-        # Action keys
-        # noop [0]
-        if action[1] == 0:
-            player.apply_force_to_player(PLAYER_WEIGHT * force_x,
-                                         PLAYER_WEIGHT * force_y)
-
-            self._ball_move_with_player(player)
-
-        # dash [1]
-        elif action[1] == 1:
-            player.apply_force_to_player(PLAYER_FORCE_LIMIT * force_x,
-                                         PLAYER_FORCE_LIMIT * force_y)
-            self._ball_move_with_player(player)
-
-        # shoot [2]
-        elif action[1] == 2:
-            if self.ball.has_contact_with(player):
-                if player.side == "left":
-                    goal = [self.width, self.height/2]
-                elif player.side == "right":
-                    goal = [0, self.height/2]
-                else:
-                    print("invalid side")
-
-                ball_pos = self.ball.get_position()
-                ball_to_goal_vec, ball_to_goal_vec_mag = get_vec(
-                    goal, ball_pos)
-
-                ball_force_x = BALL_FORCE_LIMIT * \
-                    ball_to_goal_vec[0] / ball_to_goal_vec_mag
-                ball_force_y = BALL_FORCE_LIMIT * \
-                    ball_to_goal_vec[1] / ball_to_goal_vec_mag
-
-                # decrease the velocity influence on shoot
-                self.ball.body.velocity /= 2
-
-                self.ball_owner_side = player.side
-                self.ball.apply_force_to_ball(ball_force_x, ball_force_y)
-            else:
-                pass
-
-        # press [3]
-        elif action[1] == 3:
-            # cannot press with ball
-            if self.ball.has_contact_with(player):
-                pass
-            # no ball, no arrow keys, run to ball (press)
-            elif action[0] == 0:
-                ball_pos = self.ball.get_position()
-                player_pos = player.get_position()
-
-                player_to_ball_vec, player_to_ball_vec_mag = get_vec(
-                    ball_pos, player_pos)
-
-                player_force_x = PLAYER_FORCE_LIMIT * \
-                    player_to_ball_vec[0] / player_to_ball_vec_mag
-                player_force_y = PLAYER_FORCE_LIMIT * \
-                    player_to_ball_vec[1] / player_to_ball_vec_mag
-
-                player.apply_force_to_player(player_force_x, player_force_y)
-            # no ball, arrow keys pressed, run as the arrow key
-            else:
-                pass
-
-        # pass [4]
-        elif action[1] == 4:
-            if self.ball.has_contact_with(player):
-                team = self.team_A if player.side == "left" else self.team_B
-
-                target_player = team.get_pass_target_teammate(
-                    player, arrow_keys=action[0])
-
-                goal = target_player.get_position()
-
-                ball_pos = self.ball.get_position()
-                ball_to_goal_vec, ball_to_goal_vec_mag = get_vec(
-                    goal, ball_pos)
-
-                ball_force_x = (BALL_FORCE_LIMIT - 20) * \
-                    ball_to_goal_vec[0] / ball_to_goal_vec_mag
-                ball_force_y = (BALL_FORCE_LIMIT - 20) * \
-                    ball_to_goal_vec[1] / ball_to_goal_vec_mag
-
-                # decrease the velocity influence on pass
-                self.ball.body.velocity /= 10
-
-                self.ball_owner_side = player.side
-                self.ball.apply_force_to_ball(ball_force_x, ball_force_y)
-            # cannot pass ball without ball
-            else:
-                pass
-
-        else:
-            print("invalid action key")
-
-    def _process_action(self, player, action, action_space_type):
-        if action_space_type == "discrete":
-            self._process_discrete_action(player, [action // 5, action % 5])
-        elif action_space_type == "multi-discrete":
-            self._process_discrete_action(player, action)
-        else:
-            self._process_box_action(player, action)
-
-    def map_action_to_players(self, actions, action_space_type):
-        if action_space_type == "multi-discrete":
-            return np.reshape(actions, (-1, 2))
-        elif action_space_type == "discrete":
-            return np.ravel(actions)
-        elif action_space_type == "box":
-            return np.reshape(actions, (self.number_of_player, 4+self.message_dims_number))
+    def map_action_to_players(self, actions):
+        return np.reshape(actions, (self.number_of_player, 4+self.message_dims_number))
 
     # action space
     # 1) Arrow Keys: Discrete 5  - NOOP[0], UP[1], RIGHT[2], DOWN[3], LEFT[4]  - params: min: 0, max: 4
@@ -513,13 +357,11 @@ class Futbol(gym.Env):
     def step(self, team_A_action):
         team_B_action, _ = self.team_B_model.predict(self.inverse_obs)
 
-        if self.action_space_type[1] == "box":
-            for action in team_B_action :
-                inverse_physic_vector_by_x_axis(action)
+        for action in team_B_action :
+            inverse_physic_vector_by_x_axis(action)
 
-
-        team_A_action = self.map_action_to_players(team_A_action, self.action_space_type[0])
-        team_B_action = self.map_action_to_players(team_B_action, self.action_space_type[1])
+        team_A_action = self.map_action_to_players(team_A_action)
+        team_B_action = self.map_action_to_players(team_B_action)
 
         team_A_init_distance_arr = self._ball_to_team_distance_arr(self.team_A)
         team_B_init_distance_arr = self._ball_to_team_distance_arr(self.team_B)
@@ -529,8 +371,8 @@ class Futbol(gym.Env):
         done = False
         reward = [0, 0]
 
-        self._process_team_action(self.team_A.player_array, team_A_action, self.action_space_type[0])
-        self._process_team_action(self.team_B.player_array, team_B_action, self.action_space_type[1])
+        self._process_team_action(self.team_A.player_array, team_A_action)
+        self._process_team_action(self.team_B.player_array, team_B_action)
 
         # fix the out of bound situation
         out = self.check_and_fix_out_bounds() if self.is_out_rule_enabled else False
@@ -566,9 +408,9 @@ class Futbol(gym.Env):
 
         return self.observation, reward[0], done, {}
 
-    def _process_team_action(self, team_players, team_actions, team_action_space_type):
+    def _process_team_action(self, team_players, team_actions):
         for player, action in zip(team_players, team_actions):
-            self._process_action(player, action, team_action_space_type)
+            self._process_action(player, action)
             # change ball owner if any contact
             if self.ball.has_contact_with(player):
                 self.ball_owner_side = player.side

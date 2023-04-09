@@ -1,13 +1,9 @@
-from copy import copy
-
 import pygame
 
-import hagl
 from agents.random_agent import RandomAgent
 from hagl import Position, Velocity, T
 from hagl.functions import Shift, Scale
 from hagl.proxy import HAGLPyMunk
-from .player import Player
 from .ball import Ball
 from .team import Team
 
