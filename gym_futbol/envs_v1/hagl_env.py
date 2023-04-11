@@ -192,13 +192,15 @@ class HAGLFootball:
     def _get_observation(self):
         observation = Observation()
         observation.ball = self.ball.body
-        observation.team_a = [player.body.copy() for player in self.team_A.player_array]
-        observation.team_b = [player.body.copy() for player in self.team_B.player_array]
+        observation.team_a = self.team_A.player_array
+        observation.team_b = self.team_B.player_array
 
         inverse_observation = Observation()
         inverse_observation.ball = inverse_by_x(self.ball.body.copy(), BALL_AVG_POSITION[0])
-        inverse_observation.team_b = [inverse_by_x(player.body, PLAYER_AVG_POSITION[0]) for player in self.team_A.player_array]
-        inverse_observation.team_a = [inverse_by_x(player.body, PLAYER_AVG_POSITION[0]) for player in self.team_B.player_array]
+
+        player_inverse = lambda player: inverse_by_x(player, PLAYER_AVG_POSITION[0])
+        inverse_observation.team_b = map(player_inverse, self.team_A.player_array)
+        inverse_observation.team_b = map(player_inverse, self.team_B.player_array)
 
         return observation, inverse_observation
 
