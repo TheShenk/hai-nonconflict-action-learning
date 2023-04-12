@@ -5,7 +5,7 @@ import pygame
 import hagl
 from agents.random_agent import RandomAgent
 from hagl import Position, Velocity, T
-from hagl.functions import Shift, Scale
+from hagl.functions import Normalize
 from hagl.proxy import HAGLPyMunk
 from .player import Player
 from .ball import Ball
@@ -45,23 +45,15 @@ padding = 3
 
 PLAYER_MAX_POSITION = np.array([WIDTH + padding, HEIGHT])
 PLAYER_MIN_POSITION = np.array([0 - padding, 0])
-PLAYER_AVG_POSITION = (PLAYER_MAX_POSITION + PLAYER_MIN_POSITION) / 2
-PLAYER_RANGE_POSITION = (PLAYER_MAX_POSITION - PLAYER_MIN_POSITION) / 2
 
 PLAYER_MAX_VELOCITY_arr = np.array([PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY])
 PLAYER_MIN_VELOCITY_arr = np.array([-PLAYER_MAX_VELOCITY, -PLAYER_MAX_VELOCITY])
-PLAYER_AVG_VELOCITY = (PLAYER_MAX_VELOCITY_arr + PLAYER_MIN_VELOCITY_arr) / 2
-PLAYER_RANGE_VELOCITY = (PLAYER_MAX_VELOCITY_arr - PLAYER_MIN_VELOCITY_arr) / 2
 
 BALL_MAX_POSITION_arr = np.array([WIDTH, HEIGHT])
 BALL_MIN_POSITION_arr = np.array([-0, -0])
-BALL_AVG_POSITION = (BALL_MAX_POSITION_arr + BALL_MIN_POSITION_arr) / 2
-BALL_RANGE_POSITION = (BALL_MAX_POSITION_arr - BALL_MIN_POSITION_arr) / 2
 
 BALL_MAX_VELOCITY_arr = np.array([BALL_MAX_VELOCITY, BALL_MAX_VELOCITY])
 BALL_MIN_VELOCITY_arr = np.array([-BALL_MAX_VELOCITY, -BALL_MAX_VELOCITY])
-BALL_AVG_VELOCITY = (BALL_MAX_VELOCITY_arr + BALL_MIN_VELOCITY_arr) / 2
-BALL_RANGE_VELOCITY = (BALL_MAX_VELOCITY_arr - BALL_MIN_VELOCITY_arr) / 2
 
 TEAMS_COUNT = 2
 PHYSIC_OBSERVATION_DIMS_NUMBER = 4
@@ -75,21 +67,22 @@ def get_vec(coor_t, coor_o):
     return vec, vec_mag
 
 
-def inverse_by_x(body, average_x):
+def inverse_by_x(body, min_x, max_x):
     inverse_body = body.copy()
-    inverse_body.position = ( 2 * average_x - body.position.x, body.position.y)
+    # 2 * average_x - body.position.x = 2 * (max_x + min_x) / 2 - body.position.x = min_x + max_x - body.position.x
+    inverse_body.position = (min_x + max_x - body.position.x, body.position.y)
     inverse_body.velocity = (-body.velocity.x, body.velocity.y)
 
     return inverse_body
 
 class PlayerObservation:
-    position = Shift(Scale(Position, at=1 / PLAYER_RANGE_POSITION), by=-PLAYER_AVG_POSITION)
-    velocity = Shift(Scale(Position, at=1 / PLAYER_RANGE_VELOCITY), by=-PLAYER_AVG_VELOCITY)
+    position = Normalize(Position, left=PLAYER_MIN_POSITION, right=PLAYER_MAX_POSITION)
+    velocity = Normalize(Velocity, left=PLAYER_MIN_VELOCITY_arr, right=PLAYER_MAX_VELOCITY_arr)
 PlayerObservation = HAGLPyMunk(PlayerObservation)
 
 class BallObservation:
-    position = Shift(Scale(Position, at=1 / BALL_RANGE_POSITION), by=-BALL_AVG_POSITION)
-    velocity = Shift(Scale(Position, at=1 / BALL_RANGE_VELOCITY), by=-BALL_AVG_VELOCITY)
+    position = Normalize(Position, left=BALL_MIN_POSITION_arr, right=BALL_MAX_POSITION_arr)
+    velocity = Normalize(Velocity, left=BALL_MIN_VELOCITY_arr, right=BALL_MAX_VELOCITY_arr)
 BallObservation = HAGLPyMunk(BallObservation)
 
 TeamObservation = [PlayerObservation, T("players_count")]
@@ -194,17 +187,23 @@ class HAGLFootball:
 
     # normalized observation
     def _get_observation(self):
+
+        get_body = lambda obj: obj.body
+        team_A_body = list(map(get_body, self.team_A.player_array))
+        team_B_body = list(map(get_body, self.team_B.player_array))
+
         observation = Observation()
+
         observation.ball = self.ball.body
-        observation.team_a = self.team_A.player_array
-        observation.team_b = self.team_B.player_array
+        observation.team_a = team_A_body
+        observation.team_b = team_B_body
 
         inverse_observation = Observation()
-        inverse_observation.ball = inverse_by_x(self.ball.body.copy(), BALL_AVG_POSITION[0])
+        inverse_observation.ball = inverse_by_x(self.ball.body, BALL_MIN_POSITION_arr[0], BALL_MAX_POSITION_arr[0])
 
-        player_inverse = lambda player: inverse_by_x(player, PLAYER_AVG_POSITION[0])
-        inverse_observation.team_b = map(player_inverse, self.team_A.player_array)
-        inverse_observation.team_b = map(player_inverse, self.team_B.player_array)
+        player_inverse = lambda player: inverse_by_x(player.copy(), PLAYER_MIN_POSITION[0], PLAYER_MAX_POSITION[0])
+        inverse_observation.team_b = list(map(player_inverse, team_A_body))
+        inverse_observation.team_a = list(map(player_inverse, team_B_body))
 
         return observation, inverse_observation
 

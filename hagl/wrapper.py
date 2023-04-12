@@ -87,7 +87,6 @@ class HAGLModel:
         observation = gymnasium.spaces.flatten(self.gymnasium_observation_space, gymnasium_observation)
 
         action, _ = self.model.predict(observation)
-        print(action)
 
         gymnasium_action = gymnasium.spaces.unflatten(self.gymnasium_action_space, action)
         hagl_action = hagl.construct(self.hagl_action_space, gymnasium_action, self.template_values)

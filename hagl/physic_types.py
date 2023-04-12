@@ -10,6 +10,19 @@ from hagl.python_types import Float
 
 COORD_NAMES = ['x', 'y', 'z', 'w']
 
+
+def _get_array_from_value(value):
+    if isinstance(value, Vector):
+        value_array = value.array
+    elif isinstance(value, np.ndarray):
+        value_array = value
+    elif isinstance(value, list):
+        value_array = np.array(value)
+    else:
+        raise PhysicException(f"Unknown object to add to vector: {value}")
+    return value_array
+
+
 class Vector(HAGLType):
 
     @staticmethod
@@ -32,33 +45,28 @@ class Vector(HAGLType):
 
     def __add__(self, other):
         value = Vector()
-
-        if isinstance(other, Vector):
-            add_array_values = self.array+other.array
-        elif isinstance(other, np.ndarray):
-            add_array_values = self.array + other
-        elif isinstance(other, list):
-            add_array_values = self.array + np.array(other)
-        else:
-            raise PhysicException(f"Unknown object to add to vector: {other}")
-
-        value.array = add_array_values
+        other_array = _get_array_from_value(other)
+        value.array = self.array - other_array
         return value
 
     def __mul__(self, other):
         value = Vector()
-
-        if isinstance(other, Vector):
-            add_array_values = self.array * other.array
-        elif isinstance(other, np.ndarray):
-            add_array_values = self.array * other
-        elif isinstance(other, list):
-            add_array_values = self.array * np.array(other)
-        else:
-            raise PhysicException(f"Unknown object to mul with vector: {other}")
-
-        value.array = add_array_values
+        other_array = _get_array_from_value(other)
+        value.array = self.array * other_array
         return value
+
+    def __sub__(self, other):
+        value = Vector()
+        other_array = _get_array_from_value(other)
+        value.array = self.array - other_array
+        return value
+
+    def __truediv__(self, other):
+        value = Vector()
+        other_array = _get_array_from_value(other)
+        value.array = self.array / other_array
+        return value
+
 
     def __setattr__(self, key, value):
         if key in COORD_NAMES:
