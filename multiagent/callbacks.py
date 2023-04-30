@@ -6,7 +6,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 
-from utils import ListAsValue
+from utils_dir.list_as_value import ListAsValue
 
 
 class MACallback:

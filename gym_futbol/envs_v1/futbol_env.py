@@ -1,19 +1,14 @@
 import gym
 import pygame
-from gym import error, spaces
-from gym.utils import seeding
+from gymnasium import spaces
 
 from agents.random_agent import RandomAgent
-from .player import Player
 from .ball import Ball
 from .team import Team
 
-import gym
-from gym import spaces
 import numpy as np
 import random
 import math
-from pymunk.vec2d import Vec2d
 import pymunk.matplotlib_util
 import pymunk
 import matplotlib.pyplot as plt
@@ -129,7 +124,7 @@ class Futbol(gym.Env):
             low=-1.0,
             high=1.0,
             shape=(total_observation_dims_number,),
-            dtype=np.float32
+            dtype=np.dtype(np.float64)
         )
 
         # create space

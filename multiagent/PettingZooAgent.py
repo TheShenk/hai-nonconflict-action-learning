@@ -6,9 +6,10 @@ from tqdm import tqdm
 from agents.base_agent import BaseAgent
 from multiagent.action_combiners import NON_VEC_COMBINER, BOX_COMBINER
 from multiagent.callbacks import MACallback
+from multiagent.multi_model_agent import MultiModelAgent
 
 
-class MultiModelAgent(BaseAgent):
+class PettingZooAgent(MultiModelAgent):
 
     def __init__(self,
                  env,
@@ -67,7 +68,8 @@ class MultiModelAgent(BaseAgent):
             callback = MACallback()
 
         total_models_count = len(self.models) + len(self.static_models)
-        observations, dones = [self.env.reset(),] * total_models_count, np.ones((self.env.num_envs,))
+
+        observations, dones = self.env.reset().reshape((-1, 1, 18)), np.ones((self.env.num_envs,))
 
         self.time = 0
 
@@ -126,4 +128,4 @@ class MultiModelAgent(BaseAgent):
 
         next_observation, reward, done, info = self.env.step(total_action)
 
-        return [next_observation,] * total_models_count, [reward,] * total_models_count, done, info, sample_actions_results
+        return next_observation.reshape((-1, 1, 18)), [reward,] * total_models_count, done, info, sample_actions_results
