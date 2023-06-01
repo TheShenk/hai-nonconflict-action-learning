@@ -1,7 +1,10 @@
 from typing import Tuple
 
 import gym
-from gym_futbol.envs_v1 import Futbol
+import pygame
+import pymunk
+
+from gym_futbol.envs_v1.futbol_env import Futbol, TIME_STEP
 
 import numpy as np
 
@@ -17,6 +20,7 @@ from multiagent.env.multiagent_football import MultiAgentFootball
 from multiagent.multi_model_agent import MultiModelAgent
 from multiagent.action_combiners import NON_VEC_COMBINER, NON_VEC_DISCRETE_COMBINER
 
+import pymunk.pygame_util
 
 class RayFootballProxy(gym.Env):
 
@@ -39,20 +43,37 @@ class RayFootballProxy(gym.Env):
 
 class RayMultiAgentFootball(MultiAgentEnv):
 
-    def __init__(self, env: Futbol):
+    def __init__(self, env: Futbol, render_env):
         super().__init__()
         self.env = env
+        self.surface = None
         self.agents = [f"player_{r}" for r in range(env.number_of_player)]
 
-        self.observation_space = self.env.observation_space
-        self.action_space = gym.spaces.Dict({agent: gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) for agent in self.agents})
+        self.observation_space = gym.spaces.Dict({"obs": self.env.observation_space})
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,))
 
         self._agent_ids = [f"player_{r}" for r in range(env.number_of_player)]
-        # self._action_space_in_preferred_format = {agent: gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) for agent in self,agents}
+
+        RES = WIDTH, HEIGHT = 600, 400
+        FPS = 24
+
+        self.render_env = render_env
+        if self.render_env:
+            pygame.init()
+            pygame.key.set_repeat(1, 1)
+            self.surface = pygame.display.set_mode(RES)
+            self.clock = pygame.time.Clock()
+
+            translation = (4, 2)
+            scale_factor = min(WIDTH / (env.width + translation[0] * 2), HEIGHT / (env.height + translation[1] * 2))
+            self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
+            self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
+                translation[0], translation[1])
+            self.fps = FPS
 
     def reset(self) -> MultiAgentDict:
         obs = self.env.reset()
-        observations = {agent: obs for agent in self.agents}
+        observations = {agent: {"obs": obs} for agent in self.agents}
         return observations
 
     def step(
@@ -60,22 +81,47 @@ class RayMultiAgentFootball(MultiAgentEnv):
     ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
 
         total_act = [action_dict[agent] for agent in self.agents]
-        combiner_function = NON_VEC_DISCRETE_COMBINER if self.env.action_space_type[
-                                                             0] == "discrete" else NON_VEC_COMBINER
+        combiner_function = NON_VEC_DISCRETE_COMBINER if self.env.action_space_type[0] == "discrete" \
+            else NON_VEC_COMBINER
         combined_act = combiner_function(total_act)
+
 
         obs, rew, done, info = self.env.step(combined_act)
         obs = np.clip(obs, -1.0, 1.0)
 
-        observations = {agent: obs for agent in self.agents}
-        rewards = {agent: rew for agent in self.agents}
+        observations = {agent: {"obs": obs.copy()} for agent in self.agents}
+        rewards = {agent: rew/1000 for agent in self.agents}
         dones = {agent: done for agent in self.agents}
         dones.update({"__all__": done})
         infos = {agent: {} for agent in self.agents}
 
         return observations, rewards, dones, infos
 
+    def get_env_info(self):
+        env_info = {
+            "space_obs": self.observation_space,
+            "space_act": self.action_space,
+            "num_agents": self.env.number_of_player,
+            "episode_limit": int(self.env.total_time/TIME_STEP),
+            "policy_mapping_info": {"all_scenario":
+                                        {"description": "one team smart",
+                                         "team_prefix": ("player_",),
+                                         "all_agents_one_policy": True,
+                                         "one_agent_one_policy": True}
+                                    }
+        }
+        return env_info
 
+    def render(self, mode=None) -> None:
+        if self.render_env:
+            self.surface.fill("black")
+            self.env.space.debug_draw(self.draw_options)
+            pygame.display.flip()
+            self.clock.tick(self.fps)
+
+    def close(self):
+        if self.render_env:
+            pygame.quit()
 
 def create_football_hca(env_config):
     env = Futbol(number_of_player=2, action_space_type=["box", "box"])
@@ -86,12 +132,13 @@ def create_football_hca(env_config):
     return RayFootballProxy(env)
 
 def create_ma_football_hca(env_config):
+    print("create_ma_football_hca", env_config)
     env = Futbol(number_of_player=2, action_space_type=["box", "box"])
     env.set_team_b_model(MultiModelAgent(env, static_models=[
         SimpleAttackingAgent(env, 0),
         SimpleGoalkeeperAgent(env, 1)
     ]))
-    return RayMultiAgentFootball(env)
+    return RayMultiAgentFootball(env, render_env=env_config["render_env"])
 
 register_env("football-hca", create_football_hca)
 register_env("ma-football-hca", create_ma_football_hca)
