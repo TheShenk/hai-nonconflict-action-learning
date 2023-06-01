@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import Optional, Union, Iterable, Type
 
 import gym
-from stable_baselines3.common.base_class import BaseAlgorithm, BaseAlgorithmSelf
+from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.noise import VectorizedActionNoise
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
@@ -32,7 +32,7 @@ class MultiAgentProxy:
         self.model.save(path, exclude, include)
 
     @classmethod
-    def load(cls, model_cls: Type[BaseAlgorithmSelf], *args, **kwargs):
+    def load(cls, model_cls, *args, **kwargs):
         model = model_cls.load(*args, **kwargs)
         return cls(model)
 

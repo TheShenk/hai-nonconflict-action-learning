@@ -129,7 +129,7 @@ class Futbol(gym.Env):
             low=-1.0,
             high=1.0,
             shape=(total_observation_dims_number,),
-            dtype=np.float32
+            dtype=np.float64
         )
 
         # create space

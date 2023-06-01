@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from typing import Optional, Tuple, Dict, Any
 
 import gym.spaces
 import numpy as np
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector
-from pettingzoo.utils.env import ObsType, ActionType
 
 from gym_futbol.envs_v1 import Futbol
 from multiagent.action_combiners import NON_VEC_COMBINER, NON_VEC_DISCRETE_COMBINER
@@ -27,7 +28,7 @@ class MultiAgentFootball(AECEnv):
             agent: env.observation_space for agent in self.possible_agents
         }
 
-    def step(self, action: ActionType):
+    def step(self, action):
 
         if self.dones[self.agent_selection] or self.truncations[self.agent_selection]:
             # handles stepping an agent which is already dead
@@ -103,6 +104,6 @@ class MultiAgentFootball(AECEnv):
 
     def last(
         self, observe: bool = True
-    ) -> Tuple[Optional[ObsType], float, bool, Dict[str, Any]]:
+    ) -> Tuple[Any, float, bool, Dict[str, Any]]:
         obs, rew, done, trunc, info = super().last(observe)
         return obs, rew, done, info

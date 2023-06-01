@@ -8,7 +8,6 @@ import pymunk.pygame_util
 import pymunk.matplotlib_util
 
 import pygame
-from IPython import display
 import matplotlib.pyplot as plt
 from gym import Wrapper
 
@@ -87,8 +86,6 @@ class MatplotlibVisualizer(BaseVisualizer):
         draw_options = pymunk.matplotlib_util.DrawOptions(ax)
         self.env.space.debug_draw(draw_options)
         plt.title(f"Reward: {reward}", loc='left')
-        display.display(plt.gcf())
-        display.clear_output(wait=True)
 
 
 class ConstantEnv(gym.Env):
