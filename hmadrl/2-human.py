@@ -8,11 +8,14 @@ import argparse
 from marllib.envs.base_env import ENV_REGISTRY
 from marllib.marl import recursive_dict_update, POlICY_REGISTRY, dict_update
 from ray.rllib.policy.policy import PolicySpec
+from ray.tune import register_env
 
 from hmadrl.custom_policy import PyGamePolicy
+from hmadrl.human_recorder import HumanRecorder
 
 from multiagent.env.ray_football import create_ma_football_hca
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
+
 
 def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
 
@@ -48,7 +51,7 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
     restore_config = exp_info['restore_path']
     render_config = {
         "evaluation_interval": 1,
-        "evaluation_num_episodes": 100,
+        "evaluation_num_episodes": 5,
         "evaluation_num_workers": 1,
         "evaluation_config": {
             "record_env": False,
@@ -73,13 +76,15 @@ parser.add_argument('--map', default='hca', type=str, help='name of map (default
 parser.add_argument('--algo', default='mappo', type=str, help='name of learning algorithm (default: mappo)')
 parser.add_argument('--time', default=1000, type=int, help='number of timesteps (default: 1000)')
 parser.add_argument('--checkpoint', type=pathlib.Path, help='path to checkpoint from first step')
+parser.add_argument('--trajectory', type=pathlib.Path, help='path to file t osave human actions and observations')
 
-args = parser.parse_args()
+cli_args = parser.parse_args()
 
-params_path = args.checkpoint / '..' / 'params.jsom'
-model_candidates = [file for file in args.checkpoint.iterdir() if (len(file.suffix) == 0 and file.name[0] != '.')]
+params_path = cli_args.checkpoint / '..' / 'params.jsom'
+model_candidates = [file for file in cli_args.checkpoint.iterdir() if (len(file.suffix) == 0 and file.name[0] != '.')]
 assert len(model_candidates) == 1, model_candidates
 model_path = model_candidates[0]
+
 
 def human_policy(key, obs):
     enemy_goal_position = np.array([1, 0])
@@ -111,23 +116,31 @@ policies = {
 }
 policy_mapping_fn = lambda agent_id: {"player_0": "human", "player_1": "policy_0"}[agent_id]
 
-env = marl.make_env(environment_name=args.env, map_name=args.map, render_env=True)
-algo = marl._Algo(args.algo)(hyperparam_source="common")
+env = marl.make_env(environment_name=cli_args.env, map_name=cli_args.map, render_env=True)
+algo = marl._Algo(cli_args.algo)(hyperparam_source="common")
 model = marl.build_model(env, algo, {"core_arch": "mlp"})
 
 env_instance, env_info = env
 model_class, model_info = model
 
+
+def HMADRLEnv(context):
+    return HumanRecorder(ENV_REGISTRY[cli_args.env](env_info['env_args']), "player_0", cli_args.trajectory)
+
+
+env_info['env'] = 'hmadrl'
+register_env(f"hmadrl_{cli_args.map}", HMADRLEnv)
+
 exp_info = env_info
 exp_info = recursive_dict_update(exp_info, model_info)
 exp_info = recursive_dict_update(exp_info, algo.algo_parameters)
 
-exp_info['algorithm'] = args.algo
+exp_info['algorithm'] = cli_args.algo
 exp_info['restore_path'] = {
     "params_path": params_path,
     "model_path": model_path
 }
 exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_info, env_instance, None, policies, policy_mapping_fn)
 
-algo_runner = POlICY_REGISTRY[args.algo]
+algo_runner = POlICY_REGISTRY[cli_args.algo]
 result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
