@@ -10,8 +10,10 @@ from marllib.marl import recursive_dict_update, POlICY_REGISTRY, dict_update
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import register_env
 
-from hmadrl.custom_policy import PyGamePolicy
+from hmadrl.custom_policy import PyGamePolicy, ImitationPolicy
 from hmadrl.human_recorder import HumanRecorder
+
+from imitation.algorithms import bc
 
 from multiagent.env.ray_football import create_ma_football_hca
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
@@ -70,13 +72,13 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
     return exp_info, run_config, env_info, stop_config, restore_config
 
 
-parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
+parser = argparse.ArgumentParser(description='Retraiin learned agents to play with human. Fourth step of HMADRL algorithm.')
 parser.add_argument('--env', default='myfootball', type=str, help='name of environment (default: myfootball)')
 parser.add_argument('--map', default='hca', type=str, help='name of map (default: hca)')
 parser.add_argument('--algo', default='mappo', type=str, help='name of learning algorithm (default: mappo)')
 parser.add_argument('--time', default=1000, type=int, help='number of timesteps (default: 1000)')
 parser.add_argument('--checkpoint', type=pathlib.Path, help='path to checkpoint from first step')
-parser.add_argument('--trajectory', type=pathlib.Path, help='path to file to save human actions and observations')
+parser.add_argument('--human-model', type=pathlib.Path, help='path to file to load humanoid agent model from third step')
 
 cli_args = parser.parse_args()
 
@@ -85,33 +87,10 @@ model_candidates = [file for file in cli_args.checkpoint.iterdir() if (len(file.
 assert len(model_candidates) == 1, model_candidates
 model_path = model_candidates[0]
 
-
-def human_policy(key, obs):
-    enemy_goal_position = np.array([1, 0])
-    ball_position = obs[:2]
-    ball_velocity = obs[2:4]
-
-    ball_enemy_goal_vector = enemy_goal_position - ball_position
-    ball_enemy_goal_distance = np.linalg.norm(ball_enemy_goal_vector)
-
-    move_direction = [0, 0]
-    hit_direction = ball_enemy_goal_vector / ball_enemy_goal_distance
-
-    if key == pygame.K_RIGHT or key == pygame.K_d:
-        move_direction = [1, 0]
-    elif key == pygame.K_DOWN or key == pygame.K_s:
-        move_direction = [0, 1]
-    elif key == pygame.K_LEFT or key == pygame.K_a:
-        move_direction = [-1, 0]
-    elif key == pygame.K_UP or key == pygame.K_w:
-        move_direction = [0, -1]
-    elif key == pygame.K_SPACE:
-        hit_direction = [1, 0]
-
-    return np.append(move_direction, hit_direction)
+humanoid_model = bc.reconstruct_policy(cli_args.human_model, device='cpu')
 
 policies = {
-    "human": PolicySpec(PyGamePolicy(human_policy)),
+    "human": PolicySpec(ImitationPolicy(humanoid_model)),
     "policy_0": PolicySpec()
 }
 policy_mapping_fn = lambda agent_id: {"player_0": "human", "player_1": "policy_0"}[agent_id]
@@ -122,14 +101,6 @@ model = marl.build_model(env, algo, {"core_arch": "mlp"})
 
 env_instance, env_info = env
 model_class, model_info = model
-
-
-def HMADRLEnv(context):
-    return HumanRecorder(ENV_REGISTRY[cli_args.env](env_info['env_args']), "player_0", cli_args.trajectory)
-
-
-env_info['env'] = 'hmadrl'
-register_env(f"hmadrl_{cli_args.map}", HMADRLEnv)
 
 exp_info = env_info
 exp_info = recursive_dict_update(exp_info, model_info)

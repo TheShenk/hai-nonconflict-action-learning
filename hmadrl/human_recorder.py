@@ -28,6 +28,7 @@ class HumanRecorder(MultiAgentEnv):
 
     def step(self, actions):
         observations, reward, terminated, info = self.env.step(actions)
+
         self.episode_actions.append(actions[self.human_agent_id])
         self.episode_observations.append(observations[self.human_agent_id]['obs'])
         self.episode_rewards.append(reward[self.human_agent_id])

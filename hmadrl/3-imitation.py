@@ -48,12 +48,12 @@ for trajectory_index in range(len(actions)):
     action, observation, reward, terminal = actions[trajectory_index], observations[trajectory_index], rewards[trajectory_index], terminals[trajectory_index]
     action = action[:-1]
     reward = reward[:-1]
+
     trajectories.append(TrajectoryWithRew(acts=action,
                                           obs=observation,
                                           rews=reward,
                                           terminal=terminal,
                                           infos=None))
-
 rng = np.random.default_rng(0)
 bc_trainer = bc.BC(
     observation_space=gym.spaces.Box(
