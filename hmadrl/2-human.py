@@ -51,7 +51,7 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
     restore_config = exp_info['restore_path']
     render_config = {
         "evaluation_interval": 1,
-        "evaluation_num_episodes": 5,
+        "evaluation_num_episodes": 1,
         "evaluation_num_workers": 1,
         "evaluation_config": {
             "record_env": False,
@@ -76,7 +76,7 @@ parser.add_argument('--map', default='hca', type=str, help='name of map (default
 parser.add_argument('--algo', default='mappo', type=str, help='name of learning algorithm (default: mappo)')
 parser.add_argument('--time', default=1000, type=int, help='number of timesteps (default: 1000)')
 parser.add_argument('--checkpoint', type=pathlib.Path, help='path to checkpoint from first step')
-parser.add_argument('--trajectory', type=pathlib.Path, help='path to file t osave human actions and observations')
+parser.add_argument('--trajectory', type=pathlib.Path, help='path to file to save human actions and observations')
 
 cli_args = parser.parse_args()
 
