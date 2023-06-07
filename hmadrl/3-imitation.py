@@ -4,31 +4,25 @@ import pathlib
 import gym
 import numpy as np
 from imitation.algorithms import bc
+from imitation.data.rollout import TrajectoryAccumulator
 from imitation.data.types import TrajectoryWithRew, TransitionsWithRew
 
 
-def make_transitions(trajectories):
-    transitions = []
+def make_trajectories(actions, observations, rewards, dones: np.ndarray):
+    trajectories = []
+    done_indexes, = np.where(dones)
+    observation_shift = 0
 
-    for trajectory_index in range(len(actions)):
-        action, observation, reward, terminal = actions[trajectory_index], observations[trajectory_index], rewards[
-            trajectory_index], terminals[trajectory_index]
+    for previous_done, current_done in zip(np.append([0], done_indexes[:-1]), done_indexes):
 
-        action = action[:-1]
-        reward = reward[:-1]
-        next_observation = observation[1:]
-        observation = observation[:-1]
-        done = np.full((len(observation),), False)
-        done[-1] = terminal
+        trajectories.append(TrajectoryWithRew(acts=actions[previous_done:current_done],
+                                              obs=observations[previous_done + observation_shift:current_done + observation_shift + 1],
+                                              rews=rewards[previous_done:current_done],
+                                              infos=np.empty((current_done-previous_done,)),
+                                              terminal=True))
+        observation_shift += 1
 
-        transitions.append(TransitionsWithRew(acts=action,
-                                              obs=observation,
-                                              rews=reward,
-                                              dones=done,
-                                              next_obs=next_observation,
-                                              infos=np.empty((len(observation),))))
-
-    return transitions
+    return trajectories
 
 
 parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step of HMADRL algorithm.')
@@ -40,20 +34,9 @@ trajectories = np.load(args.trajectory)
 actions = trajectories['actions']
 observations = trajectories['observations']
 rewards = trajectories['rewards']
-terminals = trajectories['terminal']
+dones = trajectories['dones']
 
-trajectories = []
-
-for trajectory_index in range(len(actions)):
-    action, observation, reward, terminal = actions[trajectory_index], observations[trajectory_index], rewards[trajectory_index], terminals[trajectory_index]
-    action = action[:-1]
-    reward = reward[:-1]
-
-    trajectories.append(TrajectoryWithRew(acts=action,
-                                          obs=observation,
-                                          rews=reward,
-                                          terminal=terminal,
-                                          infos=None))
+trajectories = make_trajectories(actions, observations, rewards, dones)
 rng = np.random.default_rng(0)
 bc_trainer = bc.BC(
     observation_space=gym.spaces.Box(
@@ -67,5 +50,5 @@ bc_trainer = bc.BC(
     rng=rng,
     device='cpu'
 )
-bc_trainer.train(n_epochs=10)
+bc_trainer.train(n_epochs=1000)
 bc_trainer.save_policy(args.human_model)

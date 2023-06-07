@@ -43,7 +43,7 @@ class RayFootballProxy(gym.Env):
 
 class RayMultiAgentFootball(MultiAgentEnv):
 
-    def __init__(self, env: Futbol, render_env):
+    def __init__(self, env: Futbol):
         super().__init__()
         self.env = env
         self.surface = None
@@ -53,23 +53,6 @@ class RayMultiAgentFootball(MultiAgentEnv):
         self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,))
 
         self._agent_ids = [f"player_{r}" for r in range(env.number_of_player)]
-
-        RES = WIDTH, HEIGHT = 600, 400
-        FPS = 24
-
-        self.render_env = render_env
-        if self.render_env:
-            pygame.init()
-            pygame.key.set_repeat(1, 1)
-            self.surface = pygame.display.set_mode(RES)
-            self.clock = pygame.time.Clock()
-
-            translation = (4, 2)
-            scale_factor = min(WIDTH / (env.width + translation[0] * 2), HEIGHT / (env.height + translation[1] * 2))
-            self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
-            self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
-                translation[0], translation[1])
-            self.fps = FPS
 
     def reset(self) -> MultiAgentDict:
         obs = self.env.reset()
@@ -112,15 +95,32 @@ class RayMultiAgentFootball(MultiAgentEnv):
         }
         return env_info
 
-    def render(self, mode=None) -> None:
-        if self.render_env:
-            self.surface.fill("black")
-            self.env.space.debug_draw(self.draw_options)
-            pygame.display.flip()
-            self.clock.tick(self.fps)
+    def render(self, mode=None):
+        if not pygame.get_init():
+            RES = WIDTH, HEIGHT = 600, 400
+            FPS = 24
+
+            pygame.init()
+            pygame.key.set_repeat(1, 1)
+            self.surface = pygame.display.set_mode(RES)
+            self.clock = pygame.time.Clock()
+
+            translation = (4, 2)
+            scale_factor = min(WIDTH / (self.env.width + translation[0] * 2), HEIGHT / (self.env.height + translation[1] * 2))
+            self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
+            self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
+                translation[0], translation[1])
+            self.fps = FPS
+
+        self.surface.fill("black")
+        self.env.space.debug_draw(self.draw_options)
+        pygame.display.flip()
+        self.clock.tick(self.fps)
+
+        return True
 
     def close(self):
-        if self.render_env:
+        if pygame.get_init():
             pygame.quit()
 
 def create_football_hca(env_config):
@@ -138,7 +138,7 @@ def create_ma_football_hca(env_config):
         SimpleAttackingAgent(env, 0),
         SimpleGoalkeeperAgent(env, 1)
     ]))
-    return RayMultiAgentFootball(env, render_env=env_config["render_env"])
+    return RayMultiAgentFootball(env)
 
 register_env("football-hca", create_football_hca)
 register_env("ma-football-hca", create_ma_football_hca)

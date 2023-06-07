@@ -36,18 +36,26 @@ class CustomPolicy(Policy):
         pass
 
 
-class _PyGamePolicy(CustomPolicy):
+class PyGamePolicy:
 
-    def __init__(self, key_action_fn, observation_space, action_space, config):
-        super().__init__(observation_space, action_space, config)
+    def __init__(self, key_action_fn):
         self.key_action_fn = key_action_fn
 
     def collect_action(self, obs):
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                return self.key_action_fn(event.key, obs)
+        if pygame.get_init():
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.KEYDOWN:
+                    return self.key_action_fn(event.key, obs)
         return self.key_action_fn(pygame.NOEVENT, obs)
+
+    def __call__(self, obs):
+        return self.collect_action(obs)
+
+
+def ImitationPolicy(imitation_policy):
+    return lambda observation_space, action_space, config: \
+        _ImitationPolicy(imitation_policy, observation_space, action_space, config)
 
 
 class _ImitationPolicy(CustomPolicy):
@@ -60,13 +68,3 @@ class _ImitationPolicy(CustomPolicy):
         action, _ = self.imitation_policy.predict(obs)
         print(action)
         return action
-
-
-def PyGamePolicy(key_action_dict):
-    return lambda observation_space, action_space, config: \
-        _PyGamePolicy(key_action_dict, observation_space, action_space, config)
-
-
-def ImitationPolicy(imitation_policy):
-    return lambda observation_space, action_space, config: \
-        _ImitationPolicy(imitation_policy, observation_space, action_space, config)

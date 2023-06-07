@@ -95,7 +95,7 @@ policies = {
 }
 policy_mapping_fn = lambda agent_id: {"player_0": "human", "player_1": "policy_0"}[agent_id]
 
-env = marl.make_env(environment_name=cli_args.env, map_name=cli_args.map, render_env=True)
+env = marl.make_env(environment_name=cli_args.env, map_name=cli_args.map)
 algo = marl._Algo(cli_args.algo)(hyperparam_source="common")
 model = marl.build_model(env, algo, {"core_arch": "mlp"})
 
