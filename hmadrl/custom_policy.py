@@ -66,5 +66,4 @@ class _ImitationPolicy(CustomPolicy):
 
     def collect_action(self, obs):
         action, _ = self.imitation_policy.predict(obs)
-        print(action)
         return action

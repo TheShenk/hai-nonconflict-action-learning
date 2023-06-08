@@ -9,6 +9,7 @@ from marllib.envs.base_env import ENV_REGISTRY
 from marllib.marl import recursive_dict_update, POlICY_REGISTRY, dict_update
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import register_env
+from stable_baselines3 import PPO
 
 from hmadrl.custom_policy import PyGamePolicy, ImitationPolicy
 from hmadrl.human_recorder import HumanRecorder
@@ -87,7 +88,8 @@ model_candidates = [file for file in cli_args.checkpoint.iterdir() if (len(file.
 assert len(model_candidates) == 1, model_candidates
 model_path = model_candidates[0]
 
-humanoid_model = bc.reconstruct_policy(cli_args.human_model, device='cpu')
+# humanoid_model = bc.reconstruct_policy(cli_args.human_model, device='cpu')
+humanoid_model = PPO.load(cli_args.human_model, device='cpu')
 
 policies = {
     "human": PolicySpec(ImitationPolicy(humanoid_model)),
