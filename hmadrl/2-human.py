@@ -18,11 +18,11 @@ parser = argparse.ArgumentParser(description='Collect human trajectories. Second
 parser.add_argument('--env', default='myfootball', type=str, help='name of environment (default: myfootball)')
 parser.add_argument('--map', default='hca', type=str, help='name of map (default: hca)')
 parser.add_argument('--algo', default='mappo', type=str, help='name of learning algorithm (default: mappo)')
-parser.add_argument('--episodes', default=5, type=int, help='number of episodes (default: 5)')
+parser.add_argument('--episodes', default=15, type=int, help='number of episodes (default: 5)')
 parser.add_argument('--checkpoint', type=str, help='path to checkpoint from first step')
 parser.add_argument('--trajectory', type=str, help='path to file to save human actions and observations')
 
-cli_args = parser.parse_args()
+args = parser.parse_args()
 
 
 def human_policy(key, obs):
@@ -50,9 +50,9 @@ def human_policy(key, obs):
     return np.append(move_direction, hit_direction)
 
 
-env = marl.make_env(environment_name=cli_args.env, map_name=cli_args.map)
+env = marl.make_env(environment_name=args.env, map_name=args.map)
 env_instance, _ = env
-trainer = load_trainer(cli_args.algo, env, cli_args.checkpoint)
+trainer = load_trainer(args.algo, env, args.checkpoint)
 
 
 def rollout(env, policy, episodes_count):
@@ -66,10 +66,7 @@ def rollout(env, policy, episodes_count):
     env.close()
 
 
-rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, 'player_0', cli_args.trajectory),
+rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, 'player_0', args.trajectory),
                                  {'player_1': trainer.get_policy('policy_1')}, 'player_0')
 rollout_policy = PyGamePolicy(human_policy)
-rollout(rollout_env, rollout_policy, cli_args.episodes)
-
-# algo_runner = POlICY_REGISTRY[cli_args.algo]
-# result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
+rollout(rollout_env, rollout_policy, args.episodes)
