@@ -9,21 +9,15 @@ from hmadrl.custom_policy import PyGamePolicy
 from hmadrl.human_recorder import HumanRecorder
 from hmadrl.marllib_utils import load_trainer
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
+from hmadrl.settings_utils import load_settings
 
 from multiagent.env.ray_football import create_ma_football_hca
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
 
-
 parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
-parser.add_argument('--env', default='myfootball', type=str, help='name of environment (default: myfootball)')
-parser.add_argument('--map', default='hca', type=str, help='name of map (default: hca)')
-parser.add_argument('--algo', default='mappo', type=str, help='name of learning algorithm (default: mappo)')
-parser.add_argument('--episodes', default=15, type=int, help='number of episodes (default: 5)')
-parser.add_argument('--checkpoint', type=str, help='path to checkpoint from first step')
-parser.add_argument('--trajectory', type=str, help='path to file to save human actions and observations')
-
+parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
-
+settings = load_settings(args.settings)
 
 def human_policy(key, obs):
     enemy_goal_position = np.array([1, 0])
@@ -50,9 +44,9 @@ def human_policy(key, obs):
     return np.append(move_direction, hit_direction)
 
 
-env = marl.make_env(environment_name=args.env, map_name=args.map)
+env = marl.make_env(environment_name=settings['env']['name'], map_name=settings['env']['map'])
 env_instance, _ = env
-trainer = load_trainer(args.algo, env, args.checkpoint)
+trainer = load_trainer(settings['multiagent']['algo']['name'], env, settings['save']['checkpoint'])
 
 
 def rollout(env, policy, episodes_count):
@@ -66,7 +60,7 @@ def rollout(env, policy, episodes_count):
     env.close()
 
 
-rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, 'player_0', args.trajectory),
+rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, 'player_0', settings['save']['trajectory']),
                                  {'player_1': trainer.get_policy('policy_1')}, 'player_0')
 rollout_policy = PyGamePolicy(human_policy)
-rollout(rollout_env, rollout_policy, args.episodes)
+rollout(rollout_env, rollout_policy, settings['rollout']['episodes'])

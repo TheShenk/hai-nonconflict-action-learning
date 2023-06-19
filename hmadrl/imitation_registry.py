@@ -6,6 +6,8 @@ from imitation.algorithms import bc
 from imitation.algorithms.density import DensityAlgorithm
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
+from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, HER, TD3
+from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 
 
@@ -131,4 +133,14 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "airl": AIRLTrainer,
     "density": DensityTrainer
     #TODO: dagger, MCE IRL, DI-enginebc_creator
+}
+
+RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
+    "a2c": A2C,
+    "ddpg": DDPG,
+    "dqn": DQN,
+    "her": HER,
+    "ppo": PPO,
+    "sac": SAC,
+    "td3": TD3,
 }
