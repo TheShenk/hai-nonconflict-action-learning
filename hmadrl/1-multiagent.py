@@ -12,8 +12,13 @@ parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1, help
 args = parser.parse_args()
 settings = load_settings(args.settings)
 
-env = marl.make_env(environment_name=settings['env']['name'], map_name=settings['env']['map'])
-algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common")
-model = marl.build_model(env, algo, {"core_arch": "mlp"})
-algo.fit(env, model, stop={'timesteps_total': settings['multiagent']['timesteps']})
+env = marl.make_env(environment_name=settings['env']['name'],
+                    map_name=settings['env']['map'],
+                    **settings['env']['args'])
+algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
+                                                          **settings['multiagent']['algo']['args'])
+model = marl.build_model(env, algo, settings['multiagent']['model'])
+algo.fit(env, model,
+         stop={'timesteps_total': settings['multiagent']['timesteps']},
+         local_dir=settings['save']['multiagent_model'])
 

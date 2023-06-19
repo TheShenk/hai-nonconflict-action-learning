@@ -44,9 +44,14 @@ def human_policy(key, obs):
     return np.append(move_direction, hit_direction)
 
 
-env = marl.make_env(environment_name=settings['env']['name'], map_name=settings['env']['map'])
+env = marl.make_env(environment_name=settings['env']['name'],
+                    map_name=settings['env']['map'],
+                    **settings['env']['args'])
 env_instance, _ = env
-trainer = load_trainer(settings['multiagent']['algo']['name'], env, settings['save']['checkpoint'])
+algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
+                                                          **settings['multiagent']['algo']['args'])
+model = marl.build_model(env, algo, settings['multiagent']['model'])
+trainer = load_trainer(algo, env, model, settings['save']['multiagent_model'])
 
 
 def rollout(env, policy, episodes_count):
