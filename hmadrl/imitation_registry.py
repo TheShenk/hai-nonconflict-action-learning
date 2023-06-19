@@ -33,17 +33,17 @@ class ImitationTrainer:
 class BaseImitationTrainer(ImitationTrainer):
     def __init__(self, algo, venv, demonstrations, rng, inner_algo):
         super().__init__(venv, demonstrations, rng, inner_algo)
-        self.inner_algo = inner_algo(env=venv, policy='MlpPolicy', device='cpu')
+        self.inner_algo = inner_algo
         self.trainer = algo(
             venv=venv,
             demonstrations=demonstrations,
-            rl_algo=inner_algo(env=venv, policy='MlpPolicy', device='cpu'),
+            rl_algo=self.inner_algo,
             rng=rng
         )
 
     @staticmethod
-    def load(path, device, inner_algo: BasePolicy):
-        return inner_algo.load(path=path, device=device)
+    def load(path, device, inner_algo_cls: Type[BasePolicy]):
+        return inner_algo_cls.load(path=path, device=device)
 
     def save(self, path):
         self.inner_algo.save(path)
@@ -77,14 +77,14 @@ class BCTrainer(ImitationTrainer):
 
 
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
-    def __init__(self, algo, venv, demonstrations, rng, inner_algo: Type[BasePolicy]):
+    def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy):
         super().__init__(venv, demonstrations, rng, inner_algo)
         self.reward_net = BasicRewardNet(
             venv.observation_space,
             venv.action_space,
             normalize_input_layer=RunningNorm,
         )
-        self.inner_algo = inner_algo(env=venv, policy='MlpPolicy', device='cpu')
+        self.inner_algo = inner_algo
         self.trainer = algo(
             demonstrations=demonstrations,
             venv=venv,
