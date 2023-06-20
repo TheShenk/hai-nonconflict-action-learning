@@ -6,7 +6,7 @@ from imitation.algorithms import bc
 from imitation.algorithms.density import DensityAlgorithm
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
-from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, HER, TD3
+from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 
@@ -80,7 +80,10 @@ class BCTrainer(ImitationTrainer):
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
     def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy, algo_args):
         super().__init__(venv, demonstrations, rng, inner_algo, algo_args)
-        # TODO: reward net settings
+        # TODO: настройки RewardNet. Сложность - для них существуют свои оболочки, то есть не очень понятно как
+        #  указать какой вид сети использовать.
+        #  Указывать массив используемых оболочек?
+        #  Определить в импортирумом python-файле?
         self.reward_net = BasicRewardNet(
             venv.observation_space,
             venv.action_space,
@@ -131,15 +134,16 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "bc": BCTrainer,
     "gail": GAILTrainer,
     "airl": AIRLTrainer,
-    "density": DensityTrainer
-    #TODO: dagger, MCE IRL, DI-enginebc_creator
+    "density": DensityTrainer,
+    # TODO: dagger (требует слияния 2 и 3 шага),
+    #  MCE-IRL (поддерживает только TabularPOMDP среды из библиотеки seals)
+    #  DI-engine
 }
 
 RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
     "a2c": A2C,
     "ddpg": DDPG,
     "dqn": DQN,
-    "her": HER,
     "ppo": PPO,
     "sac": SAC,
     "td3": TD3,

@@ -7,7 +7,7 @@ from marllib.envs.base_env import ENV_REGISTRY
 
 from hmadrl.custom_policy import PyGamePolicy
 from hmadrl.human_recorder import HumanRecorder
-from hmadrl.marllib_utils import load_trainer
+from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings
 
@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description='Collect human trajectories. Second
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+
 
 def human_policy(key, obs):
     enemy_goal_position = np.array([1, 0])
@@ -65,7 +66,12 @@ def rollout(env, policy, episodes_count):
     env.close()
 
 
-rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, 'player_0', settings['save']['trajectory']),
-                                 {'player_1': trainer.get_policy('policy_1')}, 'player_0')
+policy_mapping = create_policy_mapping(env_instance)
+policy_mapping = {agent_id: trainer.get_policy(policy_id) for agent_id, policy_id in policy_mapping.items()}
+human_agent = settings['rollout']['human_agent']
+policy_mapping.pop(human_agent, None)
+
+rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, human_agent, settings['save']['trajectory']),
+                                 policy_mapping, human_agent)
 rollout_policy = PyGamePolicy(human_policy)
 rollout(rollout_env, rollout_policy, settings['rollout']['episodes'])

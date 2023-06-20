@@ -6,10 +6,10 @@ from marllib import marl
 from marllib.envs.base_env import ENV_REGISTRY
 from stable_baselines3.common.env_util import make_vec_env
 
-from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
-from hmadrl.marllib_utils import load_trainer
+from hmadrl.imitation_registry import IMITATION_REGISTRY
+from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings
+from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings
 
 from multiagent.env.ray_football import create_ma_football_hca
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
@@ -55,10 +55,15 @@ algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="com
 model = marl.build_model(env, algo, settings['multiagent']['model'])
 trainer = load_trainer(algo, env, model, settings['save']['multiagent_model'])
 
-rollout_env = PreSettedAgentsEnv(env_instance, {'player_1': trainer.get_policy('policy_1')}, 'player_0')
+policy_mapping = create_policy_mapping(env_instance)
+policy_mapping = {agent_id: trainer.get_policy(policy_id) for agent_id, policy_id in policy_mapping.items()}
+human_agent = settings['rollout']['human_agent']
+policy_mapping.pop(human_agent, None)
+
+rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 
-inner_algo = RL_REGISTRY[settings['imitation']['inner_algo']['name']](env=rollout_env, **settings['imitation']['inner_algo']['args'])
+inner_algo = create_inner_algo_from_settings(rollout_env, settings)
 trainer = IMITATION_REGISTRY[settings['imitation']['algo']['name']](rollout_env, trajectories, rng, inner_algo, settings['imitation']['algo']['args'])
 trainer.train(settings['imitation']['timesteps'])
 trainer.save(settings['save']['human_model'])

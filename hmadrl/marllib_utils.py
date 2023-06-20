@@ -2,7 +2,6 @@ import os.path
 import pathlib
 
 import cloudpickle
-from marllib import marl
 from marllib.marl import recursive_dict_update, dict_update, _Algo
 from marllib.marl.algos.core.CC.mappo import MAPPOTrainer
 from ray.rllib import MultiAgentEnv
@@ -93,6 +92,7 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     with open(checkpoint_path, 'rb') as checkpoint_file:
         checkpoint = cloudpickle.load(checkpoint_file)
     worker = cloudpickle.loads(checkpoint['worker'])
+    print(worker.keys())
     policies: Dict[str, PolicySpec] = worker['policy_specs']
 
     exp_info = env_info
@@ -118,3 +118,8 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
 
     trainer.restore(checkpoint_path)
     return trainer
+
+
+def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
+    policy_mapping = {agent_id: f"policy_{agent_number}" for agent_number, agent_id in enumerate(env.agents)}
+    return policy_mapping
