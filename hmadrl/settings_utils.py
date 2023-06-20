@@ -25,3 +25,12 @@ def create_inner_algo_from_settings(rollout_env, settings):
                 inner_algo_args = inner_algo_settings.get('args', {})
                 return inner_algo_cls(env=rollout_env, **inner_algo_args)
     return None
+
+
+def load_human_policy(filepath):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location('human_policy_module', filepath)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.human_policy

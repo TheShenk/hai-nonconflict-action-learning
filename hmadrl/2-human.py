@@ -9,41 +9,17 @@ from hmadrl.custom_policy import PyGamePolicy
 from hmadrl.human_recorder import HumanRecorder
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings
+from hmadrl.settings_utils import load_settings, load_human_policy
 
 from multiagent.env.ray_football import create_ma_football_hca
+
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
 
 parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
-parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1, help='path to settings file (default: hmadrl.yaml)')
+parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1,
+                    help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
-
-
-def human_policy(key, obs):
-    enemy_goal_position = np.array([1, 0])
-    ball_position = obs[:2]
-    ball_velocity = obs[2:4]
-
-    ball_enemy_goal_vector = enemy_goal_position - ball_position
-    ball_enemy_goal_distance = np.linalg.norm(ball_enemy_goal_vector)
-
-    move_direction = [0, 0]
-    hit_direction = ball_enemy_goal_vector / ball_enemy_goal_distance
-
-    if key == pygame.K_RIGHT or key == pygame.K_d:
-        move_direction = [1, 0]
-    elif key == pygame.K_DOWN or key == pygame.K_s:
-        move_direction = [0, 1]
-    elif key == pygame.K_LEFT or key == pygame.K_a:
-        move_direction = [-1, 0]
-    elif key == pygame.K_UP or key == pygame.K_w:
-        move_direction = [0, -1]
-    elif key == pygame.K_SPACE:
-        hit_direction = [1, 0]
-
-    return np.append(move_direction, hit_direction)
-
 
 env = marl.make_env(environment_name=settings['env']['name'],
                     map_name=settings['env']['map'],
@@ -68,10 +44,13 @@ def rollout(env, policy, episodes_count):
 
 policy_mapping = create_policy_mapping(env_instance)
 policy_mapping = {agent_id: trainer.get_policy(policy_id) for agent_id, policy_id in policy_mapping.items()}
+
 human_agent = settings['rollout']['human_agent']
 policy_mapping.pop(human_agent, None)
 
 rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, human_agent, settings['save']['trajectory']),
                                  policy_mapping, human_agent)
+
+human_policy = load_human_policy(settings['rollout']['human_policy_file'])
 rollout_policy = PyGamePolicy(human_policy)
 rollout(rollout_env, rollout_policy, settings['rollout']['episodes'])
