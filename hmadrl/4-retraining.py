@@ -31,7 +31,6 @@ policy_mapping_fn = lambda agent_id: {"player_0": "human", "player_1": "policy_0
 env = marl.make_env(environment_name=settings['env']['name'],
                     map_name=settings['env']['map'],
                     **settings['env']['args'])
-env_instance, _ = env
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **settings['multiagent']['algo']['args'])
 model = marl.build_model(env, algo, settings['multiagent']['model'])

@@ -59,6 +59,6 @@ rollout_env = PreSettedAgentsEnv(env_instance, {'player_1': trainer.get_policy('
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 
 inner_algo = RL_REGISTRY[settings['imitation']['inner_algo']['name']](env=rollout_env, **settings['imitation']['inner_algo']['args'])
-trainer = IMITATION_REGISTRY[settings['imitation']['algo']['name']](rollout_env, trajectories, rng, inner_algo)
+trainer = IMITATION_REGISTRY[settings['imitation']['algo']['name']](rollout_env, trajectories, rng, inner_algo, settings['imitation']['algo']['args'])
 trainer.train(settings['imitation']['timesteps'])
 trainer.save(settings['save']['human_model'])

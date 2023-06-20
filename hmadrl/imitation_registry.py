@@ -13,11 +13,12 @@ from stable_baselines3.common.policies import BasePolicy
 
 class ImitationTrainer:
 
-    def __init__(self, venv, demonstrations, rng, inner_algo):
+    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args):
         self.venv = venv
         self.demonstrations = demonstrations
         self.rng = rng
         self.inner_algo = inner_algo
+        self.algo_args = algo_args
 
     @staticmethod
     def load(path, device, inner_algo):
@@ -31,14 +32,15 @@ class ImitationTrainer:
 
 
 class BaseImitationTrainer(ImitationTrainer):
-    def __init__(self, algo, venv, demonstrations, rng, inner_algo):
-        super().__init__(venv, demonstrations, rng, inner_algo)
+    def __init__(self, algo, venv, demonstrations, rng, inner_algo, algo_args):
+        super().__init__(venv, demonstrations, rng, inner_algo, algo_args)
         self.inner_algo = inner_algo
         self.trainer = algo(
             venv=venv,
             demonstrations=demonstrations,
             rl_algo=self.inner_algo,
-            rng=rng
+            rng=rng,
+            **algo_args
         )
 
     @staticmethod
@@ -54,15 +56,14 @@ class BaseImitationTrainer(ImitationTrainer):
 
 class BCTrainer(ImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo):
-        super().__init__(venv, demonstrations, rng, inner_algo)
+    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args):
+        super().__init__(venv, demonstrations, rng, inner_algo, algo_args)
         self.trainer = bc.BC(
             observation_space=venv.observation_space,
             action_space=venv.action_space,
             demonstrations=demonstrations,
             rng=rng,
-            # TODO: device as arg
-            device='cpu'
+            **algo_args
         )
 
     @staticmethod
@@ -77,8 +78,9 @@ class BCTrainer(ImitationTrainer):
 
 
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
-    def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy):
-        super().__init__(venv, demonstrations, rng, inner_algo)
+    def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy, algo_args):
+        super().__init__(venv, demonstrations, rng, inner_algo, algo_args)
+        # TODO: reward net settings
         self.reward_net = BasicRewardNet(
             venv.observation_space,
             venv.action_space,
@@ -88,11 +90,9 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
         self.trainer = algo(
             demonstrations=demonstrations,
             venv=venv,
-            demo_batch_size=1024,
-            gen_replay_buffer_capacity=2048,
-            n_disc_updates_per_round=4,
             gen_algo=self.inner_algo,
-            reward_net=self.reward_net
+            reward_net=self.reward_net,
+            **algo_args
         )
 
     @staticmethod
@@ -108,20 +108,20 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
 
 class GAILTrainer(GenerativeAdversarialImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo):
-        super().__init__(GAIL, venv, demonstrations, rng, inner_algo)
+    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args):
+        super().__init__(GAIL, venv, demonstrations, rng, inner_algo, algo_args)
 
 
 class AIRLTrainer(GenerativeAdversarialImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo):
-        super().__init__(AIRL, venv, demonstrations, rng, inner_algo)
+    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args):
+        super().__init__(AIRL, venv, demonstrations, rng, inner_algo, algo_args)
 
 
 class DensityTrainer(BaseImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo):
-        super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo)
+    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args):
+        super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo, algo_args)
 
     def train(self, timesteps):
         self.trainer.train()
