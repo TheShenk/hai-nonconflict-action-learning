@@ -1,3 +1,4 @@
+from time import time
 from typing import Dict, Type
 
 from imitation.algorithms.adversarial.airl import AIRL
@@ -5,6 +6,7 @@ from imitation.algorithms.adversarial.gail import GAIL
 from imitation.algorithms import bc
 from imitation.algorithms.density import DensityAlgorithm
 from imitation.rewards.reward_nets import BasicRewardNet
+from imitation.util.logger import configure
 from imitation.util.networks import RunningNorm
 from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -19,6 +21,7 @@ class ImitationTrainer:
         self.rng = rng
         self.inner_algo = inner_algo
         self.algo_args = algo_args
+        self.logger = configure(f"./tensorboard/imitation/{type(self).__name__}-{int(time())}", ('tensorboard',))
 
     @staticmethod
     def load(path, device, inner_algo):
@@ -40,6 +43,7 @@ class BaseImitationTrainer(ImitationTrainer):
             demonstrations=demonstrations,
             rl_algo=self.inner_algo,
             rng=rng,
+            custom_logger=self.logger,
             **algo_args
         )
 
@@ -63,6 +67,7 @@ class BCTrainer(ImitationTrainer):
             action_space=venv.action_space,
             demonstrations=demonstrations,
             rng=rng,
+            custom_logger=self.logger,
             **algo_args
         )
 
@@ -95,6 +100,7 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
             venv=venv,
             gen_algo=self.inner_algo,
             reward_net=self.reward_net,
+            custom_logger=self.logger,
             **algo_args
         )
 
