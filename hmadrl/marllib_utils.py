@@ -1,18 +1,32 @@
+import json
 import os.path
 import pathlib
 
 import cloudpickle
 from marllib.marl import recursive_dict_update, dict_update, _Algo
+from marllib.marl.algos.core.CC.coma import COMATrainer
+from marllib.marl.algos.core.CC.happo import HAPPOTrainer
+from marllib.marl.algos.core.CC.hatrpo import HATRPOTrainer
+from marllib.marl.algos.core.CC.maa2c import MAA2CTrainer
 from marllib.marl.algos.core.CC.mappo import MAPPOTrainer
+from marllib.marl.algos.core.CC.matrpo import MATRPOTrainer
+from marllib.marl.algos.core.CC.maddpg import MADDPGTrainer
+from marllib.marl.algos.core.IL.a2c import IA2CTrainer
+from marllib.marl.algos.core.IL.ddpg import IDDPGTrainer
+from marllib.marl.algos.core.IL.ppo import IPPOTrainer
+from marllib.marl.algos.core.IL.trpo import TRPOTrainer
+from marllib.marl.algos.core.VD.facmac import FACMACTrainer
+from marllib.marl.algos.core.VD.iql_vdn_qmix import JointQTrainer
+from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
+from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
 from ray.rllib import MultiAgentEnv
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
 from ray.util.ml_utils.dict import merge_dicts
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Callable
 
 
 def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
-
     env_info = env.get_env_info()
     agent_name_ls = env.agents
     env_info["agent_name_ls"] = agent_name_ls
@@ -64,20 +78,50 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
     return exp_info, run_config, env_info, stop_config, restore_config
 
 
+def find_latest_dir(dir: pathlib.Path, filter_fn: Callable[[pathlib.Path], bool]) -> pathlib.Path:
+    subdirs = [item for item in dir.iterdir() if filter_fn(item)]
+    subdirs.sort(key=lambda subdir: os.path.getmtime(subdir))
+    return subdirs[-1]
+
+
 def find_checkpoint(algo_name: str, map_name: str, core_arch: str, local_dir_path: str):
     local_dir = pathlib.Path(local_dir_path)
-    local_dir = local_dir / f"{algo_name}_{core_arch}_{map_name}"
-    local_subdirs = [item for item in local_dir.iterdir() if item.is_dir()]
-    local_subdirs.sort(key=lambda subdir: os.path.getmtime(subdir))
-
-    checkpoint_dir = local_subdirs[-1]
-    checkpoint_subdirs = [item for item in checkpoint_dir.iterdir() if item.is_dir()]
-    checkpoint_subdirs.sort(key=lambda subdir: os.path.getmtime(subdir))
-
-    checkpoint = checkpoint_subdirs[-1]
-    checkpoint = [item for item in checkpoint.iterdir() if not item.name.startswith('.') and not item.suffixes]
+    model_dir = find_latest_dir(local_dir,
+                                lambda item: item.is_dir() and
+                                             item.name.startswith(f"{algo_name}_{core_arch}_{map_name}"))
+    experiment_dir = find_latest_dir(model_dir, lambda item: item.is_dir())
+    checkpoint_dir = find_latest_dir(experiment_dir, lambda item: item.is_dir())
+    checkpoint = [item for item in checkpoint_dir.iterdir() if not item.name.startswith('.') and not item.suffixes]
     assert len(checkpoint) == 1, checkpoint
     return str(checkpoint[0])
+
+
+def get_trainer_class(algo_name, config):
+    TRAINER_REGISTER = {
+        'ippo': IPPOTrainer,
+        'mappo': MAPPOTrainer,
+        'vdppo': VDPPOTrainer,
+        'happo': HAPPOTrainer(config),
+
+        'itrpo': TRPOTrainer,
+        'matrpo': MATRPOTrainer,
+        'hatrpo': HATRPOTrainer,
+
+        'ia2c': IA2CTrainer,
+        'maa2c': MAA2CTrainer,
+        'coma': COMATrainer,  # FIXME
+        'vda2c': VDA2CTrainer,
+
+        'iddpg': IDDPGTrainer,  # FIXME
+        'maddpg': MADDPGTrainer,  # FIXME
+        'facmac': FACMACTrainer,  # FIXME
+
+        'iql': JointQTrainer,  # TODO: check (need discrete action)
+        'vdn': JointQTrainer,  # TODO: check (need discrete action)
+        'qmix': JointQTrainer  # TODO: check (need discrete action)
+    }
+
+    return TRAINER_REGISTER[algo_name]
 
 
 def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any, Dict], local_dir_path: str):
@@ -91,31 +135,40 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
 
     with open(checkpoint_path, 'rb') as checkpoint_file:
         checkpoint = cloudpickle.load(checkpoint_file)
+
+    params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
+
+    with open(params_path, 'r') as params_file:
+        params = json.load(params_file)
+
     worker = cloudpickle.loads(checkpoint['worker'])
-    print(worker.keys())
     policies: Dict[str, PolicySpec] = worker['policy_specs']
 
-    exp_info = env_info
-    exp_info = recursive_dict_update(exp_info, model_info)
-    exp_info = recursive_dict_update(exp_info, algo.algo_parameters)
+    ModelCatalog.register_custom_model("current_model", model_class)
 
-    exp_info['algorithm'] = algo.name
-    exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_info, env_instance, None, policies,
-                                                                                lambda: None)
+    recursive_dict_update(params,
+                          {
+                              "multiagent": {
+                                  "policy_mapping_fn": lambda: None,
+                                  "policies_to_train": []
+                              },
+                              "model": {
+                                  "custom_model": "current_model"
+                              },
+                              "num_workers": 1,
+                              "num_gpus": 0,
+                              "num_cpus_per_worker": 1,
+                              "num_gpus_per_worker": 0
+                          })
 
-    ModelCatalog.register_custom_model(
-        "current_model", model_class)
+    # This line could be in dict_update but standatr vd configs have policies of type string, not dict. Because of
+    # this recursive_dict_update will throw exception.
+    params["multiagent"]["policies"] = policies
+    params["model"]["custom_model_config"]["space_obs"] = env_instance.observation_space
+    params["model"]["custom_model_config"]["space_act"] = env_instance.action_space
 
-    trainer = MAPPOTrainer({"framework": "torch",
-                            "multiagent": {
-                                "policies": policies,
-                            },
-                            "model": {
-                                "custom_model": "current_model",
-                                "custom_model_config": merge_dicts(exp_info, env_info),
-                            },
-                            })
-
+    trainer_cls = get_trainer_class(algo.name, params)
+    trainer = trainer_cls(params)
     trainer.restore(checkpoint_path)
     return trainer
 
