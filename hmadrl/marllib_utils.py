@@ -112,9 +112,9 @@ def get_trainer_class(algo_name, config):
         'coma': COMATrainer,  # FIXME
         'vda2c': VDA2CTrainer,
 
-        'iddpg': IDDPGTrainer,  # FIXME
-        'maddpg': MADDPGTrainer,  # FIXME
-        'facmac': FACMACTrainer,  # FIXME
+        'iddpg': IDDPGTrainer,
+        'maddpg': MADDPGTrainer,
+        'facmac': FACMACTrainer,
 
         'iql': JointQTrainer,  # TODO: check (need discrete action)
         'vdn': JointQTrainer,  # TODO: check (need discrete action)
@@ -144,21 +144,17 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     worker = cloudpickle.loads(checkpoint['worker'])
     policies: Dict[str, PolicySpec] = worker['policy_specs']
 
-    ModelCatalog.register_custom_model("current_model", model_class)
-
     recursive_dict_update(params,
                           {
+                              "framework": "torch",
                               "multiagent": {
                                   "policy_mapping_fn": lambda: None,
                                   "policies_to_train": []
                               },
-                              "model": {
-                                  "custom_model": "current_model"
-                              },
                               "num_workers": 1,
                               "num_gpus": 0,
                               "num_cpus_per_worker": 1,
-                              "num_gpus_per_worker": 0
+                              "num_gpus_per_worker": 0,
                           })
 
     # This line could be in dict_update but standatr vd configs have policies of type string, not dict. Because of
@@ -166,6 +162,11 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     params["multiagent"]["policies"] = policies
     params["model"]["custom_model_config"]["space_obs"] = env_instance.observation_space
     params["model"]["custom_model_config"]["space_act"] = env_instance.action_space
+    if algo.name in {'iddpg', 'maddpg', 'facmac'}:
+        ModelCatalog.register_custom_model("DDPG_Model", model_class)
+    else:
+        ModelCatalog.register_custom_model("current_model", model_class)
+        params["model"]["custom_model"] = "current_model"
 
     trainer_cls = get_trainer_class(algo.name, params)
     trainer = trainer_cls(params)
