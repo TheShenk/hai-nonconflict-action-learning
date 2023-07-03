@@ -50,7 +50,9 @@ class RayMultiAgentFootball(MultiAgentEnv):
         self.agents = [f"player_{r}" for r in range(env.number_of_player)]
 
         self.observation_space = gym.spaces.Dict({"obs": self.env.observation_space})
-        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,))
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[0] == 'box' else gym.spaces.Discrete(25)
+        self.combiner_function = NON_VEC_COMBINER if self.env.action_space_type[0] == "box" \
+            else NON_VEC_DISCRETE_COMBINER
 
         self._agent_ids = [f"player_{r}" for r in range(env.number_of_player)]
 
@@ -64,9 +66,7 @@ class RayMultiAgentFootball(MultiAgentEnv):
     ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
 
         total_act = [action_dict[agent] for agent in self.agents]
-        combiner_function = NON_VEC_DISCRETE_COMBINER if self.env.action_space_type[0] == "discrete" \
-            else NON_VEC_COMBINER
-        combined_act = combiner_function(total_act)
+        combined_act = self.combiner_function(total_act)
 
 
         obs, rew, done, info = self.env.step(combined_act)
@@ -131,14 +131,18 @@ def create_football_hca(env_config):
     ]))
     return RayFootballProxy(env)
 
+
 def create_ma_football_hca(env_config):
-    print("create_ma_football_hca", env_config)
-    env = Futbol(number_of_player=2, action_space_type=["box", "box"])
+    action_space_type = 'box'
+    if env_config['map_name'] == 'hca-discrete':
+        action_space_type = 'discrete'
+    env = Futbol(number_of_player=2, action_space_type=[action_space_type, "box"])
     env.set_team_b_model(MultiModelAgent(env, static_models=[
         SimpleAttackingAgent(env, 0),
         SimpleGoalkeeperAgent(env, 1)
     ]))
     return RayMultiAgentFootball(env)
+
 
 register_env("football-hca", create_football_hca)
 register_env("ma-football-hca", create_ma_football_hca)

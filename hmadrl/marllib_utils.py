@@ -41,7 +41,7 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
         "multiagent": {
             "policies": policies,
             "policy_mapping_fn": policy_mapping_fn,
-            "policies_to_train": ["policy_0"]
+            "policies_to_train": ["policy_1"]
         },
         "framework": exp_info["framework"],
         "evaluation_interval": exp_info["evaluation_interval"],
@@ -101,24 +101,24 @@ def get_trainer_class(algo_name, config):
         'ippo': IPPOTrainer,
         'mappo': MAPPOTrainer,
         'vdppo': VDPPOTrainer,
-        'happo': HAPPOTrainer(config),
+        'happo': HAPPOTrainer(config), # FIXME: step 4
 
         'itrpo': TRPOTrainer,
         'matrpo': MATRPOTrainer,
-        'hatrpo': HATRPOTrainer,
+        'hatrpo': HATRPOTrainer, # FIXME: step 4
 
         'ia2c': IA2CTrainer,
         'maa2c': MAA2CTrainer,
-        'coma': COMATrainer,  # FIXME
+        'coma': COMATrainer, # Use discrete action space
         'vda2c': VDA2CTrainer,
 
         'iddpg': IDDPGTrainer,
-        'maddpg': MADDPGTrainer,
-        'facmac': FACMACTrainer,
+        'maddpg': MADDPGTrainer, # FIXME: step 4
+        'facmac': FACMACTrainer, # FIXME: step 4
 
-        'iql': JointQTrainer,  # TODO: check (need discrete action)
-        'vdn': JointQTrainer,  # TODO: check (need discrete action)
-        'qmix': JointQTrainer  # TODO: check (need discrete action)
+        # 'iql': JointQTrainer,  # Don't support individual learning
+        # 'vdn': JointQTrainer,  # Don't support individual learning
+        # 'qmix': JointQTrainer  # Don't support individual learning
     }
 
     return TRAINER_REGISTER[algo_name]
