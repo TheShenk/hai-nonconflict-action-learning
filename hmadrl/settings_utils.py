@@ -33,4 +33,4 @@ def load_human_policy(filepath):
     spec = importlib.util.spec_from_file_location('human_policy_module', filepath)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.human_policy
+    return module.policy

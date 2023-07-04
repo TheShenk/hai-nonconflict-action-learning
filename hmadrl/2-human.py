@@ -50,5 +50,4 @@ rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, human_agent, settin
                                  policy_mapping, human_agent)
 
 human_policy = load_human_policy(settings['rollout']['human_policy_file'])
-rollout_policy = PyGamePolicy(human_policy)
-rollout(rollout_env, rollout_policy, settings['rollout']['episodes'])
+rollout(rollout_env, human_policy, settings['rollout']['episodes'])
