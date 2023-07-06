@@ -1,3 +1,4 @@
+from ray import tune
 from yaml import load, dump
 
 from hmadrl.imitation_registry import RL_REGISTRY
@@ -34,3 +35,30 @@ def load_human_policy(filepath):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.policy
+
+
+RAY_TUNE_REGISTER = {
+    'grid_search': tune.grid_search,
+    'choice': tune.choice,
+    'uniform': tune.uniform,
+    'randn': tune.randn,
+    'loguniform': tune.loguniform
+}
+
+
+def load_tune_settings(settings: dict):
+
+    tune_settings = {}
+
+    for key, value in settings.items():
+        if key in RAY_TUNE_REGISTER.keys():
+            assert type(value) == dict, f"Setting {key} must have arguments for parameters optimization. Please, use args and kwargs."
+            args = value.get("args", [])
+            kwargs = value.get("kwargs", {})
+            return RAY_TUNE_REGISTER[key](*args, **kwargs)
+        if type(value) == dict:
+            tune_settings[key] = load_tune_settings(value)
+        else:
+            tune_settings[key] = value
+
+    return tune_settings

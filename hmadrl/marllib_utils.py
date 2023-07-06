@@ -53,27 +53,8 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
         "timesteps_total": exp_info["stop_timesteps"],
         "training_iteration": exp_info["stop_iters"],
     }
-
     stop_config = dict_update(stop_config, stop)
-
     restore_config = exp_info['restore_path']
-    render_config = {
-        "evaluation_interval": 1,
-        "evaluation_num_episodes": 1,
-        "evaluation_num_workers": 1,
-        "evaluation_config": {
-            "record_env": True,
-            "render_env": True,
-        }
-    }
-
-    run_config = recursive_dict_update(run_config, render_config)
-
-    render_stop_config = {
-        "training_iteration": 1,
-    }
-
-    stop_config = recursive_dict_update(stop_config, render_stop_config)
 
     return exp_info, run_config, env_info, stop_config, restore_config
 
