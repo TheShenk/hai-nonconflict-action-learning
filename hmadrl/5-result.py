@@ -67,10 +67,22 @@ exp_info['restore_path'] = {
     "params_path": params_path,
     "model_path": model_path
 }
-exp_info["stop_timesteps"] = settings['retraining']['timesteps']
-exp_info['local_dir'] = settings['save']['retraining_model']
 exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_info, env_instance, None, policies, policy_mapping_fn)
+
+render_config = {
+    "evaluation_interval": 1,
+    "evaluation_num_episodes": 1,
+    "evaluation_num_workers": 1,
+    "evaluation_config": {
+        "record_env": True,
+        "render_env": True,
+    }
+}
+render_stop_config = {
+    "training_iteration": 1,
+}
+stop_config = recursive_dict_update(stop_config, render_stop_config)
+run_config = recursive_dict_update(run_config, render_config)
 
 algo_runner = POlICY_REGISTRY[settings['multiagent']['algo']['name']]
 result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
-
