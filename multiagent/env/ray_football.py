@@ -15,12 +15,14 @@ from ray.rllib.utils.typing import MultiAgentDict
 
 from agents.simple_attacking_agent import SimpleAttackingAgent
 from agents.simple_goalkeeper_agent import SimpleGoalkeeperAgent
+from multiagent.env.football import TwoSideFootball
 
 from multiagent.env.multiagent_football import MultiAgentFootball
 from multiagent.multi_model_agent import MultiModelAgent
 from multiagent.action_combiners import NON_VEC_COMBINER, NON_VEC_DISCRETE_COMBINER
 
 import pymunk.pygame_util
+
 
 class RayFootballProxy(gym.Env):
 
@@ -36,7 +38,7 @@ class RayFootballProxy(gym.Env):
         return self.env.reset()
 
     def step(self, action):
-        obs, rew, done, info =  self.env.step(np.reshape(action, (2,4)))
+        obs, rew, done, info = self.env.step(np.reshape(action, (2, 4)))
         obs = np.clip(obs, -1.0, 1.0)
         return obs, rew, done, info
 
@@ -50,7 +52,9 @@ class RayMultiAgentFootball(MultiAgentEnv):
         self.agents = [f"player_{r}" for r in range(env.number_of_player)]
 
         self.observation_space = gym.spaces.Dict({"obs": self.env.observation_space})
-        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[0] == 'box' else gym.spaces.Discrete(25)
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[
+                                                                                  0] == 'box' else gym.spaces.Discrete(
+            25)
         self.combiner_function = NON_VEC_COMBINER if self.env.action_space_type[0] == "box" \
             else NON_VEC_DISCRETE_COMBINER
 
@@ -62,18 +66,17 @@ class RayMultiAgentFootball(MultiAgentEnv):
         return observations
 
     def step(
-        self, action_dict: MultiAgentDict
+            self, action_dict: MultiAgentDict
     ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
 
         total_act = [action_dict[agent] for agent in self.agents]
         combined_act = self.combiner_function(total_act)
 
-
         obs, rew, done, info = self.env.step(combined_act)
         obs = np.clip(obs, -1.0, 1.0)
 
         observations = {agent: {"obs": obs.copy()} for agent in self.agents}
-        rewards = {agent: rew/1000 for agent in self.agents}
+        rewards = {agent: rew / 1000 for agent in self.agents}
         dones = {agent: done for agent in self.agents}
         dones.update({"__all__": done})
         infos = {agent: {} for agent in self.agents}
@@ -85,7 +88,7 @@ class RayMultiAgentFootball(MultiAgentEnv):
             "space_obs": self.observation_space,
             "space_act": self.action_space,
             "num_agents": self.env.number_of_player,
-            "episode_limit": int(self.env.total_time/TIME_STEP),
+            "episode_limit": int(self.env.total_time / TIME_STEP),
             "policy_mapping_info": {"all_scenario":
                                         {"description": "one team smart",
                                          "team_prefix": ("player_",),
@@ -106,7 +109,8 @@ class RayMultiAgentFootball(MultiAgentEnv):
             self.clock = pygame.time.Clock()
 
             translation = (4, 2)
-            scale_factor = min(WIDTH / (self.env.width + translation[0] * 2), HEIGHT / (self.env.height + translation[1] * 2))
+            scale_factor = min(WIDTH / (self.env.width + translation[0] * 2),
+                               HEIGHT / (self.env.height + translation[1] * 2))
             self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
             self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
                 translation[0], translation[1])
@@ -123,6 +127,66 @@ class RayMultiAgentFootball(MultiAgentEnv):
         if pygame.get_init():
             pygame.quit()
 
+
+class RayTwoSideFootball(RayMultiAgentFootball):
+
+    def __init__(self, env: TwoSideFootball):
+        super().__init__(env)
+        self.env = env
+        self.red_agents = [f"red_{i}" for i in range(env.number_of_player)]
+        self.blue_agents = [f"blue_{i}" for i in range(env.number_of_player)]
+        self.agents = self.red_agents + self.blue_agents
+
+    def reset(self) -> MultiAgentDict:
+        obs = self.env.reset()
+        inverse_obs = self.env.inverse_obs
+        observations = {agent: {"obs": obs} for agent in self.red_agents} | \
+                       {agent: {"obs": inverse_obs} for agent in self.blue_agents}
+        return observations
+
+    def step(
+            self, action_dict: MultiAgentDict
+    ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+
+        red_action = [action_dict[agent] for agent in self.red_agents]
+        combined_red_act = self.combiner_function(red_action)
+        self.env.act(combined_red_act)
+
+        blue_action = [action_dict[agent] for agent in self.blue_agents]
+        combined_blue_act = self.combiner_function(blue_action)
+        self.env.act(combined_blue_act)
+
+        obs, inverse_obs, done, info = self.env.commit()
+        red_reward = self.env.calculate_left_reward()
+        blue_reward = self.env.calculate_right_reward()
+
+        observations = {agent: obs for agent in self.red_agents} | \
+                       {agent: inverse_obs for agent in self.blue_agents}
+        rewards = {agent: red_reward / 1000 for agent in self.red_agents} | \
+                  {agent: blue_reward / 1000 for agent in self.blue_agents}
+        dones = {agent: done for agent in self.agents}
+        dones.update({"__all__": done})
+        infos = {agent: {} for agent in self.agents}
+
+        return observations, rewards, dones, infos
+
+    def get_env_info(self):
+        env_info = {
+            "space_obs": self.observation_space,
+            "space_act": self.action_space,
+            "num_agents": self.env.number_of_player * 2,
+            "episode_limit": int(self.env.total_time / TIME_STEP),
+            "policy_mapping_info": {"all_scenario":
+                                        {"description": "both commands intelligent",
+                                         "team_prefix": ("red_", "blue_"),
+                                         "all_agents_one_policy": True,
+                                         "one_agent_one_policy": True
+                                         }
+                                    }
+        }
+        return env_info
+
+
 def create_football_hca(env_config):
     env = Futbol(number_of_player=2, action_space_type=["box", "box"])
     env.set_team_b_model(MultiModelAgent(env, static_models=[
@@ -132,17 +196,27 @@ def create_football_hca(env_config):
     return RayFootballProxy(env)
 
 
-def create_ma_football_hca(env_config):
-    action_space_type = 'box'
+def create_ma_football(env_config):
     if env_config['map_name'] == 'hca-discrete':
         action_space_type = 'discrete'
-    env = Futbol(number_of_player=2, action_space_type=[action_space_type, "box"])
-    env.set_team_b_model(MultiModelAgent(env, static_models=[
-        SimpleAttackingAgent(env, 0),
-        SimpleGoalkeeperAgent(env, 1)
-    ]))
-    return RayMultiAgentFootball(env)
+        env = Futbol(number_of_player=2, action_space_type=[action_space_type, "box"])
+        env.set_team_b_model(MultiModelAgent(env, static_models=[
+            SimpleAttackingAgent(env, 0),
+            SimpleGoalkeeperAgent(env, 1)
+        ]))
+        return RayMultiAgentFootball(env)
+    if env_config['map_name'] == 'hca':
+        action_space_type = 'box'
+        env = Futbol(number_of_player=2, action_space_type=[action_space_type, "box"])
+        env.set_team_b_model(MultiModelAgent(env, static_models=[
+            SimpleAttackingAgent(env, 0),
+            SimpleGoalkeeperAgent(env, 1)
+        ]))
+        return RayMultiAgentFootball(env)
+    if env_config['map_name'] == 'full':
+        env = TwoSideFootball(number_of_player=2, action_space_type=["box", "box"])
+        return RayTwoSideFootball(env)
 
 
 register_env("football-hca", create_football_hca)
-register_env("ma-football-hca", create_ma_football_hca)
+register_env("ma-football", create_ma_football)

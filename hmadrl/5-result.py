@@ -7,9 +7,8 @@ from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, load_human_policy
 
-from multiagent.env.ray_football import create_ma_football_hca
-
-ENV_REGISTRY["myfootball"] = create_ma_football_hca
+from multiagent.env.ray_football import create_ma_football
+ENV_REGISTRY["myfootball"] = create_ma_football
 
 parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str,

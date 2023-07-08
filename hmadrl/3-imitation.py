@@ -11,8 +11,8 @@ from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings
 
-from multiagent.env.ray_football import create_ma_football_hca
-ENV_REGISTRY["myfootball"] = create_ma_football_hca
+from multiagent.env.ray_football import create_ma_football
+ENV_REGISTRY["myfootball"] = create_ma_football
 
 
 def make_trajectories(actions, observations, rewards, dones: np.ndarray):

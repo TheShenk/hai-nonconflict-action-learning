@@ -13,10 +13,10 @@ from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config
 from hmadrl.presetted_agents_env import PreSettedAgentsMultiEnv
 from hmadrl.settings_utils import load_settings
-from multiagent.env.ray_football import create_ma_football_hca
+from multiagent.env.ray_football import create_ma_football
 
-ENV_REGISTRY["myfootball"] = create_ma_football_hca
-COOP_ENV_REGISTRY["myfootball"] = create_ma_football_hca
+ENV_REGISTRY["myfootball"] = create_ma_football
+COOP_ENV_REGISTRY["myfootball"] = create_ma_football
 
 parser = argparse.ArgumentParser(
     description='Retrain learned agents to play with human. Fourth step of HMADRL algorithm.')

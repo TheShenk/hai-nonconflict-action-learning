@@ -196,7 +196,8 @@ class Futbol(gym.Env):
         self.current_time = 0
         self.ball_owner_side = random.choice(["left", "right"])
         self._position_to_initial()
-        return self._get_observation()[0]
+        self.observation, self.inverse_obs = self._get_observation()
+        return self.observation
 
     # normalize ball observation
 
