@@ -158,3 +158,19 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
 def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
     policy_mapping = {agent_id: f"policy_{agent_number}" for agent_number, agent_id in enumerate(env.agents)}
     return policy_mapping
+
+
+def rollout(env, policy, episodes_count):
+    episode_reward = []
+    for episode_index in range(episodes_count):
+        done = False
+        observation = env.reset()
+        current_episode_reward = 0
+        while not done:
+            action = policy(observation)
+            observation, reward, done, info = env.step(action)
+            current_episode_reward += reward
+            env.render('human')
+        episode_reward.append(current_episode_reward)
+    env.close()
+    return sum(episode_reward)/episodes_count

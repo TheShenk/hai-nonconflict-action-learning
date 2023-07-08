@@ -1,88 +1,39 @@
-import pathlib
-
 from marllib import marl
 import argparse
 
 from marllib.envs.base_env import ENV_REGISTRY
-from marllib.envs.global_reward_env import COOP_ENV_REGISTRY
-from marllib.marl import POlICY_REGISTRY, recursive_dict_update
-from ray.rllib.policy.policy import PolicySpec
 
-from hmadrl.custom_policy import ImitationPolicy
-from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
-from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config
-from hmadrl.presetted_agents_env import PreSettedAgentsMultiEnv
-from hmadrl.settings_utils import load_settings
+from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout
+from hmadrl.presetted_agents_env import PreSettedAgentsEnv
+from hmadrl.settings_utils import load_settings, load_human_policy
+
 from multiagent.env.ray_football import create_ma_football_hca
 
 ENV_REGISTRY["myfootball"] = create_ma_football_hca
-COOP_ENV_REGISTRY["myfootball"] = create_ma_football_hca
 
-parser = argparse.ArgumentParser(
-    description='Retrain learned agents to play with human. Fourth step of HMADRL algorithm.')
-parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1,
+parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
+parser.add_argument('--settings', default='hmadrl.yaml', type=str,
                     help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
 
-inner_algo_cls = RL_REGISTRY[settings['imitation']['inner_algo']['name']]
-humanoid_model = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(settings['save']['human_model'], 'cpu',
-                                                                                inner_algo_cls)
-
 env = marl.make_env(environment_name=settings['env']['name'],
                     map_name=settings['env']['map'],
                     **settings['env']['args'])
+env_instance, _ = env
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **settings['multiagent']['algo']['args'])
 model = marl.build_model(env, algo, settings['multiagent']['model'])
-
-env_instance, env_info = env
-model_class, model_info = model
-
-checkpoint_path = find_checkpoint(algo.name,
-                                  env_info['env_args']['map_name'],
-                                  model_info['model_arch_args']['core_arch'],
-                                  settings['save']['multiagent_model'])
-
-model_path = checkpoint_path
-params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
-
-policies = {f'policy_{agent_num}': PolicySpec() for agent_num, agent_id in enumerate(env_instance.agents) if agent_id != settings["rollout"]["human_agent"]}
-policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class))
+trainer = load_trainer(algo, env, model, settings['save']['retraining_model'])
 
 policy_mapping = create_policy_mapping(env_instance)
-policy_mapping[settings["rollout"]["human_agent"]] = "human"
+policy_mapping = {agent_id: trainer.get_policy(policy_id) for agent_id, policy_id in policy_mapping.items()}
 
+human_agent = settings['rollout']['human_agent']
+policy_mapping.pop(human_agent, None)
 
-def policy_mapping_fn(agent_id):
-    return policy_mapping[agent_id]
+rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 
-
-exp_info = env_info
-exp_info = recursive_dict_update(exp_info, model_info)
-exp_info = recursive_dict_update(exp_info, algo.algo_parameters)
-
-exp_info['algorithm'] = settings['multiagent']['algo']['name']
-exp_info['restore_path'] = {
-    "params_path": params_path,
-    "model_path": model_path
-}
-exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_info, env_instance, None, policies, policy_mapping_fn)
-
-render_config = {
-    "evaluation_interval": 1,
-    "evaluation_num_episodes": 1,
-    "evaluation_num_workers": 1,
-    "evaluation_config": {
-        "record_env": True,
-        "render_env": True,
-    }
-}
-render_stop_config = {
-    "training_iteration": 1,
-}
-stop_config = recursive_dict_update(stop_config, render_stop_config)
-run_config = recursive_dict_update(run_config, render_config)
-
-algo_runner = POlICY_REGISTRY[settings['multiagent']['algo']['name']]
-result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
+human_policy = load_human_policy(settings['rollout']['human_policy_file'])
+average_reward = rollout(rollout_env, human_policy, settings['rollout']['episodes'])
+print("Average:", average_reward)

@@ -73,4 +73,3 @@ exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_
 
 algo_runner = POlICY_REGISTRY[settings['multiagent']['algo']['name']]
 result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
-
