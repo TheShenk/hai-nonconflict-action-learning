@@ -59,7 +59,7 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
     return exp_info, run_config, env_info, stop_config, restore_config
 
 
-def find_latest_dir(dir: pathlib.Path, filter_fn: Callable[[pathlib.Path], bool]) -> pathlib.Path:
+def find_latest_dir(dir: pathlib.Path, filter_fn: Callable[[pathlib.Path], bool] = lambda _: True) -> pathlib.Path:
     subdirs = [item for item in dir.iterdir() if filter_fn(item)]
     subdirs.sort(key=lambda subdir: os.path.getmtime(subdir))
     return subdirs[-1]

@@ -71,6 +71,7 @@ class RayMultiAgentFootball(MultiAgentEnv):
 
         total_act = [action_dict[agent] for agent in self.agents]
         combined_act = self.combiner_function(total_act)
+        combined_act = np.clip(combined_act, -1.0, 1.0)
 
         obs, rew, done, info = self.env.step(combined_act)
         obs = np.clip(obs, -1.0, 1.0)
@@ -160,12 +161,17 @@ class RayTwoSideFootball(MultiAgentEnv):
     ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
 
         red_action = [action_dict[agent] for agent in self.red_agents]
+        red_action = np.clip(red_action, -1.0, 1.0)
         self.env.act(red_action)
 
         blue_action = [action_dict[agent] for agent in self.blue_agents]
+        blue_action = np.clip(blue_action, -1.0, 1.0)
         self.env.inverted_act(blue_action)
 
         obs, inverse_obs, done, info = self.env.commit()
+        obs = np.clip(obs, -1.0, 1.0)
+        inverse_obs = np.clip(inverse_obs, -1.0, 1.0)
+
         red_reward = self.env.calculate_left_reward()
         blue_reward = self.env.calculate_right_reward()
 

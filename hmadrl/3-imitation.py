@@ -1,4 +1,5 @@
 import argparse
+from time import time
 
 import numpy as np
 import optuna
@@ -70,13 +71,14 @@ def objective(trial: optuna.Trial):
 
     optuna_settings = load_optuna_settings(settings['imitation'], trial)
     inner_algo = create_inner_algo_from_settings(rollout_env, optuna_settings)
-    trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo, optuna_settings['algo']['args'])
+    path = f"{settings['save']['human_model']}/{optuna_settings['algo']['name']}-{int(time())}-{trial.number}"
+
+    trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo,
+                                                                  optuna_settings['algo']['args'], path)
     trainer.train(settings['imitation']['timesteps'])
+    trainer.save()
 
-    path = f"{settings['save']['human_model']}/{trial.number}.zip"
-    trainer.save(path)
-
-    policy = trainer.load(path, 'cpu', type(inner_algo))
+    policy = trainer.load(f"{path}/model.zip", 'cpu', type(inner_algo))
     mean, std = evaluate_policy(policy, rollout_env)
     return mean
 
