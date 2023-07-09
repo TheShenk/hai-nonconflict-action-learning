@@ -1,15 +1,17 @@
 import argparse
 
 import numpy as np
+import optuna
 from imitation.data.types import TrajectoryWithRew
 from marllib import marl
 from marllib.envs.base_env import ENV_REGISTRY
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings
+from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings
 
 from multiagent.env.ray_football import create_ma_football
 ENV_REGISTRY["myfootball"] = create_ma_football
@@ -33,7 +35,7 @@ def make_trajectories(actions, observations, rewards, dones: np.ndarray):
 
 
 parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step of HMADRL algorithm.')
-parser.add_argument('--settings', default='hmadrl.yaml', type=str, nargs=1, help='path to settings file (default: hmadrl.yaml)')
+parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
 
@@ -63,7 +65,21 @@ policy_mapping.pop(human_agent, None)
 rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 
-inner_algo = create_inner_algo_from_settings(rollout_env, settings)
-trainer = IMITATION_REGISTRY[settings['imitation']['algo']['name']](rollout_env, trajectories, rng, inner_algo, settings['imitation']['algo']['args'])
-trainer.train(settings['imitation']['timesteps'])
-trainer.save(settings['save']['human_model'])
+
+def objective(trial: optuna.Trial):
+
+    optuna_settings = load_optuna_settings(settings['imitation'], trial)
+    inner_algo = create_inner_algo_from_settings(rollout_env, optuna_settings)
+    trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo, optuna_settings['algo']['args'])
+    trainer.train(settings['imitation']['timesteps'])
+
+    path = f"{settings['save']['human_model']}/{trial.number}.zip"
+    trainer.save(path)
+
+    policy = trainer.load(path, 'cpu', type(inner_algo))
+    mean, std = evaluate_policy(policy, rollout_env)
+    return mean
+
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=settings['imitation'].get('trials', 1))
