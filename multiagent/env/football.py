@@ -1,23 +1,13 @@
 import random
-import numpy as np
 
-from agents.random_agent import RandomAgent
 from gym_futbol.envs_v1 import Futbol
-from gym_futbol.envs_v1.futbol_env import inverse_physic_vector_by_x_axis, WIDTH, HEIGHT, PLAYER_RADIUS, BALL_RADIUS, \
-    TOTAL_TIME, NUMBER_OF_PLAYER, TIME_STEP, get_vec
+from gym_futbol.envs_v1.futbol_env import inverse_physic_vector_by_x_axis, TIME_STEP, get_vec
 
 
 class TwoSideFootball(Futbol):
 
-    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
-                 total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
-                 action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
-                 is_out_rule_enabled=True):
-        super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
-                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, goal_reward,
-                         message_dims_number, is_out_rule_enabled)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.ball_owner_side = random.choice(["left", "right"])
         self.out = None
@@ -25,17 +15,22 @@ class TwoSideFootball(Futbol):
         self.ball_init = None
         self.init_distance = {}
         self.goal_position = {
-            self.team_A: [self.width, self.height/2],
-            self.team_B: [0, self.height/2]
+            'red': [self.width, self.height/2],
+            'blue': [0, self.height/2]
+        }
+        self.teams = {
+            'red': self.team_A,
+            'blue': self.team_B
         }
 
-    def _step(self, team, action, action_space_type):
+    def _step(self, team_name, action, action_space_type):
+        team = self.teams[team_name]
         team_action = self.map_action_to_players(action, action_space_type)
-        self.init_distance[team] = self._ball_to_team_distance_arr(team)
+        self.init_distance[team_name] = self._ball_to_team_distance_arr(team)
         self._process_team_action(team.player_array, team_action, action_space_type)
 
     def act(self, team_A_action):
-        self._step(self.team_A, team_A_action, self.action_space_type[0])
+        self._step('red', team_A_action, self.action_space_type[0])
 
     def inverted_act(self, team_B_action):
 
@@ -43,23 +38,23 @@ class TwoSideFootball(Futbol):
             for action in team_B_action:
                 inverse_physic_vector_by_x_axis(action)
 
-        self._step(self.team_B, team_B_action, self.action_space_type[1])
+        self._step('blue', team_B_action, self.action_space_type[1])
 
-    def calculate_reward(self, team):
+    def calculate_reward(self, team_name):
         reward = 0
 
         # get reward
         if not self.out:
             ball_after = self.ball.get_position()
 
-            reward += self.get_team_reward(self.init_distance[team], team)
-            reward += self.get_ball_reward(self.ball_init, ball_after, self.goal_position[team])
+            reward += self.get_team_reward(self.init_distance[team_name], self.teams[team_name])
+            reward += self.get_ball_reward(self.ball_init, ball_after, self.goal_position[team_name])
 
         if self.ball_contact_goal():
             bx, _ = self.ball.get_position()
             is_in_left_goal = bx > self.width // 2
 
-            if team == self.team_A:
+            if team_name == 'red':
                 reward += self.goal_reward if is_in_left_goal else -self.goal_reward
             else:
                 reward += -self.goal_reward if is_in_left_goal else self.goal_reward
@@ -67,13 +62,12 @@ class TwoSideFootball(Futbol):
         return reward
 
     def calculate_left_reward(self):
-        return self.calculate_reward(self.team_A)
+        return self.calculate_reward('red')
 
     def calculate_right_reward(self):
-        return self.calculate_reward(self.team_B)
+        return self.calculate_reward('blue')
 
     def commit(self):
-
         self.done = False
         self.ball_init = self.ball.get_position()
         self.out = self.check_and_fix_out_bounds() if self.is_out_rule_enabled else False
@@ -92,23 +86,18 @@ class TwoSideFootball(Futbol):
         return self.observation, self.inverse_obs, self.done, {}
 
     # Используется, чтобы поддержать Monitor-wrapper
-    def step(self, team_A_action):
-        left_reward = self.calculate_left_reward()
-        right_reward = self.calculate_right_reward()
-        return self.observation, left_reward, self.done, {"left_reward": left_reward, "right_reward": right_reward}
+    # При испольовании с MARLlib код должен быть закомментирован. Иначе ошибка сериализации в pickle
+    # def step(self, team_A_action):
+    #     left_reward = self.calculate_left_reward()
+    #     right_reward = self.calculate_right_reward()
+    #     return self.observation, left_reward, self.done, {"left_reward": left_reward, "right_reward": right_reward}
+
 
 # Данная среда позволяет обучать одновременно атакующего и вратаря в игре друг против друга.
 class AttackingVsGoalkeeper(TwoSideFootball):
 
-    def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
-                 total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
-                 action_space_type="box", random_position=False,
-                 team_reward_coeff=10, ball_reward_coeff=10, goalkeeper_reward_coeff=1, goal_reward=1000,
-                 message_dims_number=0, is_out_rule_enabled=True):
-        super().__init__(width, height, player_radius, ball_radius, total_time, debug, number_of_player, team_B_model,
-                         action_space_type, random_position, team_reward_coeff, ball_reward_coeff, goal_reward,
-                         message_dims_number, is_out_rule_enabled)
+    def __init__(self, goalkeeper_reward_coeff=1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.goalkeeper_init_pos = self.get_goalkeeper().get_position()
         self.goalkeeper_reward_coeff = goalkeeper_reward_coeff
