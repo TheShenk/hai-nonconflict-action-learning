@@ -163,6 +163,7 @@ def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
 def rollout(env, policy, episodes_count):
     episode_reward = []
     for episode_index in range(episodes_count):
+        print("Current episode:", episode_index)
         done = False
         observation = env.reset()
         current_episode_reward = 0

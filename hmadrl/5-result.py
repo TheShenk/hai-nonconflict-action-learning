@@ -34,5 +34,5 @@ policy_mapping.pop(human_agent, None)
 rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 
 human_policy = load_human_policy(settings['rollout']['human_policy_file'])
-average_reward = rollout(rollout_env, human_policy, settings['rollout']['episodes'])
+average_reward = rollout(rollout_env, human_policy, settings['result']['episodes'])
 print("Average:", average_reward)
