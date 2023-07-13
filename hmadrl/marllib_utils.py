@@ -28,7 +28,7 @@ from ray.rllib.policy.policy import PolicySpec
 from ray.util.ml_utils.dict import merge_dicts
 from typing import Dict, Tuple, Any, Callable
 
-from hmadrl.PettingZooToMARLlibWrapper import PettingZooToMARLlibWrapper
+from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
 
 
 def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
@@ -189,10 +189,14 @@ def register_env(environment_name: str,
 
     def create_marllib_fn(config: dict):
         env = create_fn(config)
-        return PettingZooToMARLlibWrapper(env, max_episode_len, policy_mapping_info)
+        return MARLlibWrapper(env, max_episode_len, policy_mapping_info)
+
+    def create_coop_marllib_fn(config: dict):
+        env = create_fn(config)
+        return CoopMARLlibWrapper(env, max_episode_len, policy_mapping_info)
 
     ENV_REGISTRY[environment_name] = create_marllib_fn
-    COOP_ENV_REGISTRY[environment_name] = create_marllib_fn
+    COOP_ENV_REGISTRY[environment_name] = create_coop_marllib_fn
 
 
 def make_env(environment_name: str, map_name: str, force_coop: bool = False, **env_params):

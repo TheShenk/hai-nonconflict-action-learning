@@ -7,7 +7,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.rllib.utils.typing import MultiAgentDict
 
 
-class PettingZooToMARLlibWrapper(MultiAgentEnv):
+class MARLlibWrapper(MultiAgentEnv):
 
     def __init__(self, env: pettingzoo.ParallelEnv, max_episode_len, policy_mapping_info):
 
@@ -54,3 +54,14 @@ class PettingZooToMARLlibWrapper(MultiAgentEnv):
             "policy_mapping_info": self.policy_mapping_info
         }
         return env_info
+
+
+class CoopMARLlibWrapper(MARLlibWrapper):
+
+    def step(self, action: MultiAgentDict) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+        observation, reward, done, info = self.env.step(action)
+        observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
+        coop_reward = sum([reward[agent] for agent in observation])
+        reward = {agent: coop_reward for agent in observation}
+        return observation, reward, done, info
+
