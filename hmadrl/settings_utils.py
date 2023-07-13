@@ -27,13 +27,13 @@ def create_inner_algo_from_settings(rollout_env, settings):
     return None
 
 
-def load_human_policy(filepath):
+def import_user_code(filepath):
     import importlib.util
 
     spec = importlib.util.spec_from_file_location('human_policy_module', filepath)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.policy
+    return module
 
 
 RAY_TUNE_REGISTER = {

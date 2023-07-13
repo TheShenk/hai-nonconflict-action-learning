@@ -5,17 +5,13 @@ import numpy as np
 import optuna
 from imitation.data.types import TrajectoryWithRew
 from marllib import marl
-from marllib.envs.base_env import ENV_REGISTRY
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings
-
-from multiagent.env.ray_football import create_ma_football
-ENV_REGISTRY["myfootball"] = create_ma_football
+from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings, import_user_code
 
 
 def make_trajectories(actions, observations, rewards, dones: np.ndarray):
@@ -39,6 +35,7 @@ parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step o
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+import_user_code(settings["code"])
 
 trajectories = np.load(settings['save']['trajectory'])
 actions = trajectories['actions']

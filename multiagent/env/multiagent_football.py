@@ -4,16 +4,99 @@ from typing import Optional, Tuple, Dict, Any
 
 import gym.spaces
 import numpy as np
-from pettingzoo import AECEnv
+import pygame
+import pymunk
+from pettingzoo import AECEnv, ParallelEnv
 from pettingzoo.utils import agent_selector
 
-from gym_futbol.envs_v1 import Futbol
 from multiagent.action_combiners import NON_VEC_COMBINER, NON_VEC_DISCRETE_COMBINER
+from multiagent.env.football import TwoSideFootball
 
 
-class MultiAgentFootball(AECEnv):
+class MultiAgentFootball(ParallelEnv):
 
-    def __init__(self, env: Futbol):
+    def __init__(self, env: TwoSideFootball):
+        self.env = env
+        self.red_agents = [f"red_{i}" for i in range(env.number_of_player)]
+        self.blue_agents = [f"blue_{i}" for i in range(env.number_of_player)]
+        self.possible_agents = self.red_agents + self.blue_agents
+        self.agents = self.possible_agents
+
+        self.surface = None
+
+        self.observation_spaces = {agent: self.env.observation_space for agent in self.agents}
+
+        agent_action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[0] == 'box' \
+            else gym.spaces.Discrete(25)
+        self.action_spaces = {agent: agent_action_space for agent in self.agents}
+
+        self.combiner_function = NON_VEC_COMBINER if self.env.action_space_type[0] == "box" \
+            else NON_VEC_DISCRETE_COMBINER
+
+        self.metadata = {"render.modes": ["human"]}
+
+    def reset(self):
+        obs = self.env.reset()
+        inverse_obs = self.env.inverse_obs
+        observations = {agent: obs for agent in self.red_agents} | \
+                       {agent: inverse_obs for agent in self.blue_agents}
+        return observations
+
+    def step(self, actions):
+        red_action = [actions[agent] for agent in self.red_agents]
+        red_action = np.clip(red_action, -1.0, 1.0)
+        self.env.act(red_action)
+
+        blue_action = [actions[agent] for agent in self.blue_agents]
+        blue_action = np.clip(blue_action, -1.0, 1.0)
+        self.env.inverted_act(blue_action)
+
+        obs, inverse_obs, done, info = self.env.commit()
+        obs = np.clip(obs, -1.0, 1.0)
+        inverse_obs = np.clip(inverse_obs, -1.0, 1.0)
+
+        red_reward = self.env.calculate_left_reward()
+        blue_reward = self.env.calculate_right_reward()
+
+        observations = {agent: obs.copy() for agent in self.red_agents} | \
+                       {agent: inverse_obs.copy() for agent in self.blue_agents}
+        rewards = {agent: red_reward / 1000 for agent in self.red_agents} | \
+                  {agent: blue_reward / 1000 for agent in self.blue_agents}
+        dones = {agent: done for agent in self.agents}
+        dones.update({"__all__": done})
+        infos = {agent: {} for agent in self.agents}
+
+        return observations, rewards, dones, infos
+
+    def render(self, mode="human"):
+        if not pygame.get_init():
+            RES = WIDTH, HEIGHT = 600, 400
+            FPS = 24
+
+            pygame.init()
+            pygame.key.set_repeat(1, 1)
+            self.surface = pygame.display.set_mode(RES)
+            self.clock = pygame.time.Clock()
+
+            translation = (4, 2)
+            scale_factor = min(WIDTH / (self.env.width + translation[0] * 2),
+                               HEIGHT / (self.env.height + translation[1] * 2))
+            self.draw_options = pymunk.pygame_util.DrawOptions(self.surface)
+            self.draw_options.transform = pymunk.Transform.scaling(scale_factor) @ pymunk.Transform.translation(
+                translation[0], translation[1])
+            self.fps = FPS
+
+        self.surface.fill("black")
+        self.env.space.debug_draw(self.draw_options)
+        pygame.display.flip()
+        self.clock.tick(self.fps)
+
+        return True
+
+
+class AECMultiAgentFootball(AECEnv):
+
+    def __init__(self, env):
         super().__init__()
         self.num_moves = 0
         self.env = env
@@ -93,7 +176,7 @@ class MultiAgentFootball(AECEnv):
     def seed(self, seed: Optional[int] = None) -> None:
         pass
 
-    def observe(self, agent: str) -> Optional[ObsType]:
+    def observe(self, agent: str):
         return self.env.observation
 
     def render(self) -> None | np.ndarray | str | list:

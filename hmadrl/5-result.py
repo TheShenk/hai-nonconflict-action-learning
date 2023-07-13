@@ -1,20 +1,16 @@
 from marllib import marl
 import argparse
 
-from marllib.envs.base_env import ENV_REGISTRY
-
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, load_human_policy
-
-from multiagent.env.ray_football import create_ma_football
-ENV_REGISTRY["myfootball"] = create_ma_football
+from hmadrl.settings_utils import load_settings, import_user_code
 
 parser = argparse.ArgumentParser(description='Collect human trajectories. Second step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str,
                     help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+user = import_user_code(settings["code"])
 
 env = marl.make_env(environment_name=settings['env']['name'],
                     map_name=settings['env']['map'],
@@ -33,6 +29,5 @@ policy_mapping.pop(human_agent, None)
 
 rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 
-human_policy = load_human_policy(settings['rollout']['human_policy_file'])
-average_reward = rollout(rollout_env, human_policy, settings['result']['episodes'])
+average_reward = rollout(rollout_env, user.policy, settings['result']['episodes'])
 print("Average:", average_reward)

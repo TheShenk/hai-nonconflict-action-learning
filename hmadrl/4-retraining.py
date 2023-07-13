@@ -4,19 +4,13 @@ import pathlib
 from marllib import marl
 import argparse
 
-from marllib.envs.base_env import ENV_REGISTRY
-from marllib.envs.global_reward_env import COOP_ENV_REGISTRY
 from marllib.marl import POlICY_REGISTRY, recursive_dict_update
 from ray.rllib.policy.policy import PolicySpec
 
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config, find_latest_dir
-from hmadrl.settings_utils import load_settings
-from multiagent.env.ray_football import create_ma_football
-
-ENV_REGISTRY["myfootball"] = create_ma_football
-COOP_ENV_REGISTRY["myfootball"] = create_ma_football
+from hmadrl.settings_utils import load_settings, import_user_code
 
 parser = argparse.ArgumentParser(
     description='Retrain learned agents to play with human. Fourth step of HMADRL algorithm.')
@@ -24,6 +18,7 @@ parser.add_argument('--settings', default='hmadrl.yaml', type=str,
                     help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+import_user_code(settings["code"])
 
 checkpoint_path = find_checkpoint(settings['multiagent']['algo']['name'],
                                   settings['env']['map'],

@@ -23,7 +23,7 @@ class BaseAgent:
                  episode_start: Optional[np.ndarray] = None,
                  deterministic: bool = False):
 
-        marl_env = isinstance(self.env.observation_space, list)
+        marl_env = isinstance(self.env.observation_space, list) or hasattr(self.env, "observation_spaces")
 
         # Проверка на то, является ли текущая среда векторной. Это не может быть isinstanceof(..., VecEnv), так как
         # при обучении используется evaluate_policy, которая не заменяет текущую среду. Обычная нейронная сеть

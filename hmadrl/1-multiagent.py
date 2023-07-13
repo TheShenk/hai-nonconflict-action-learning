@@ -1,19 +1,12 @@
 import argparse
-
 from marllib import marl
-from marllib.envs.base_env import ENV_REGISTRY
-from marllib.envs.global_reward_env import COOP_ENV_REGISTRY
-
-from hmadrl.settings_utils import load_settings, load_tune_settings
-from multiagent.env.ray_football import create_ma_football
-
-ENV_REGISTRY["myfootball"] = create_ma_football
-COOP_ENV_REGISTRY["myfootball"] = create_ma_football
+from hmadrl.settings_utils import load_settings, load_tune_settings, import_user_code
 
 parser = argparse.ArgumentParser(description='Learning agent in environment. First step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+import_user_code(settings["code"])
 
 algo_settings = load_tune_settings(settings['multiagent']['algo']['args'])
 model_settings = load_tune_settings(settings['multiagent']['model'])

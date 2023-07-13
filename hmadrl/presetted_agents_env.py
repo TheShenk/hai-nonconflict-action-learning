@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import pettingzoo
 from ray.rllib import MultiAgentEnv
 
 
@@ -52,41 +53,47 @@ class PreSettedAgentsEnv(gym.Env):
         self.env.close()
 
 
-class PreSettedAgentsMultiEnv(MultiAgentEnv):
+def exclude(dictionary: dict, keys):
+    excluded_dict = {}
+    for key, item in dictionary.items():
+        if key not in keys:
+            excluded_dict[key] = item
+    return excluded_dict
 
-    def _only_real(self, object: dict):
-        return {agent_id: sub_object for agent_id, sub_object in object.items() if agent_id not in self.presetted_policies}
+
+def exclude_list(elements: list, keys):
+    return [el for el in elements if el not in keys]
+
+
+class PresetAgents(pettingzoo.ParallelEnv):
+
+    def __init__(self, env: pettingzoo.ParallelEnv, preset_policies: dict):
+        super().__init__()
+        self.env = env
+        self.observation = None
+        self.preset_policies = preset_policies
+        self.observation_spaces = exclude(self.env.observation_spaces, preset_policies.keys())
+        self.action_spaces = exclude(self.env.action_spaces, preset_policies.keys())
+        self.metadata = self.env.metadata
+        self.possible_agents = exclude_list(self.env.possible_agents, self.preset_policies.keys())
+        self.agents = self.possible_agents
 
     def step(self, action):
-        presetted_action = {agent_id: self.presetted_policies[agent_id].predict(self.observation[agent_id]['obs'])[0]
-                            for agent_id in self.presetted_policies}
+        total_action = {agent_id: self.preset_policies[agent_id].predict(self.observation[agent_id])
+                        for agent_id in self.preset_policies} | action
 
-        total_action = action | presetted_action
         self.observation, rewards, terminals, infos = self.env.step(total_action)
-        return self._only_real(self.observation), self._only_real(rewards), self._only_real(terminals), self._only_real(infos)
+        return exclude(self.observation, self.preset_policies.keys()), \
+            exclude(rewards, self.preset_policies.keys()), \
+            exclude(terminals, self.preset_policies.keys()), \
+            exclude(infos, self.preset_policies)
 
     def reset(self):
         self.observation = self.env.reset()
-        return self._only_real(self.observation)
+        return exclude(self.observation, self.preset_policies.keys())
 
     def render(self, mode="human"):
         self.env.render(mode)
 
-    def __init__(self, env: MultiAgentEnv, presetted_policies: dict):
-        super().__init__()
-        self.env = env
-        self.observation = None
-        self.presetted_policies = {
-            agent_id: presetted_policies[agent_id]
-            for agent_id in presetted_policies}
-        self.agents = self.env.agents
-        self.observation_space = self.env.observation_space
-        self.action_space = self.env.action_space
-
     def close(self):
         self.env.close()
-
-    def get_env_info(self):
-        env_info = self.env.get_env_info()
-        env_info['num_agents'] = env_info['num_agents'] - len(self.presetted_policies)
-        return env_info

@@ -3,7 +3,10 @@ import os.path
 import pathlib
 
 import cloudpickle
-from marllib.marl import recursive_dict_update, dict_update, _Algo
+import pettingzoo
+from marllib.envs.base_env import ENV_REGISTRY
+from marllib.envs.global_reward_env import COOP_ENV_REGISTRY
+from marllib.marl import recursive_dict_update, dict_update, _Algo, set_ray
 from marllib.marl.algos.core.CC.coma import COMATrainer
 from marllib.marl.algos.core.CC.happo import HAPPOTrainer
 from marllib.marl.algos.core.CC.hatrpo import HATRPOTrainer
@@ -24,6 +27,8 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
 from ray.util.ml_utils.dict import merge_dicts
 from typing import Dict, Tuple, Any, Callable
+
+from hmadrl.PettingZooToMARLlibWrapper import PettingZooToMARLlibWrapper
 
 
 def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
@@ -175,3 +180,37 @@ def rollout(env, policy, episodes_count):
         episode_reward.append(current_episode_reward)
     env.close()
     return sum(episode_reward)/episodes_count
+
+
+def register_env(environment_name: str,
+                 create_fn: Callable[[dict], pettingzoo.ParallelEnv],
+                 max_episode_len: int,
+                 policy_mapping_info: dict):
+
+    def create_marllib_fn(config: dict):
+        env = create_fn(config)
+        return PettingZooToMARLlibWrapper(env, max_episode_len, policy_mapping_info)
+
+    ENV_REGISTRY[environment_name] = create_marllib_fn
+    COOP_ENV_REGISTRY[environment_name] = create_marllib_fn
+
+
+def make_env(environment_name: str, map_name: str, force_coop: bool = False, **env_params):
+
+    env_config = dict(env=environment_name,
+                      env_args=env_params,
+                      force_coop=force_coop)
+
+    env_config["env_args"]["map_name"] = map_name
+    env_config = set_ray(env_config)
+
+    env_reg_name = env_config["env"] + "_" + env_config["env_args"]["map_name"]
+
+    if env_config["force_coop"]:
+        register_env(env_reg_name, lambda _: COOP_ENV_REGISTRY[env_config["env"]](env_config["env_args"]))
+        env = COOP_ENV_REGISTRY[env_config["env"]](env_config["env_args"])
+    else:
+        register_env(env_reg_name, lambda _: ENV_REGISTRY[env_config["env"]](env_config["env_args"]))
+        env = ENV_REGISTRY[env_config["env"]](env_config["env_args"])
+
+    return env, env_config
