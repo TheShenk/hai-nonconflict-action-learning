@@ -38,23 +38,6 @@ class CustomPolicy(Policy):
         pass
 
 
-class PyGamePolicy:
-
-    def __init__(self, key_action_fn):
-        self.key_action_fn = key_action_fn
-
-    def collect_action(self, obs):
-        if pygame.get_init():
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.KEYDOWN:
-                    return self.key_action_fn(event.key, obs)
-        return self.key_action_fn(pygame.NOEVENT, obs)
-
-    def __call__(self, obs):
-        return self.collect_action(obs)
-
-
 def ImitationPolicy(imitation_policy, model_class):
     return lambda observation_space, action_space, config: \
         _ImitationPolicy(imitation_policy, model_class, observation_space, action_space, config)

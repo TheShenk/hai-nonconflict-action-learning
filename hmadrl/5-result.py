@@ -1,7 +1,7 @@
 from marllib import marl
 import argparse
 
-from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout
+from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, import_user_code
 
@@ -12,9 +12,7 @@ args = parser.parse_args()
 settings = load_settings(args.settings)
 user = import_user_code(settings["code"])
 
-env = marl.make_env(environment_name=settings['env']['name'],
-                    map_name=settings['env']['map'],
-                    **settings['env']['args'])
+env = make_env(settings['env'])
 env_instance, _ = env
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **settings['multiagent']['algo']['args'])

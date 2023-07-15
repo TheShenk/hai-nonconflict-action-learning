@@ -9,7 +9,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
-from hmadrl.marllib_utils import load_trainer, create_policy_mapping
+from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings, import_user_code
 
@@ -46,9 +46,7 @@ dones = trajectories['dones']
 trajectories = make_trajectories(actions, observations, rewards, dones)
 rng = np.random.default_rng(0)
 
-env = marl.make_env(environment_name=settings['env']['name'],
-                    map_name=settings['env']['map'],
-                    **settings['env']['args'])
+env = make_env(settings['env'])
 env_instance, _ = env
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **settings['multiagent']['algo']['args'])

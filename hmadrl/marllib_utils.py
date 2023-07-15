@@ -1,9 +1,15 @@
 import json
 import os.path
 import pathlib
+from typing import Dict, Tuple, Any, Callable
 
 import cloudpickle
 import pettingzoo
+import ray.tune
+from ray.rllib import MultiAgentEnv
+from ray.rllib.models import ModelCatalog
+from ray.rllib.policy.policy import PolicySpec
+
 from marllib.envs.base_env import ENV_REGISTRY
 from marllib.envs.global_reward_env import COOP_ENV_REGISTRY
 from marllib.marl import recursive_dict_update, dict_update, _Algo, set_ray
@@ -22,11 +28,6 @@ from marllib.marl.algos.core.VD.facmac import FACMACTrainer
 from marllib.marl.algos.core.VD.iql_vdn_qmix import JointQTrainer
 from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
-from ray.rllib import MultiAgentEnv
-from ray.rllib.models import ModelCatalog
-from ray.rllib.policy.policy import PolicySpec
-from ray.util.ml_utils.dict import merge_dicts
-from typing import Dict, Tuple, Any, Callable
 
 from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
 
@@ -199,22 +200,25 @@ def register_env(environment_name: str,
     COOP_ENV_REGISTRY[environment_name] = create_coop_marllib_fn
 
 
-def make_env(environment_name: str, map_name: str, force_coop: bool = False, **env_params):
+def make_env(environment_settings: dict):
+    marllib_env_config = environment_settings
 
-    env_config = dict(env=environment_name,
-                      env_args=env_params,
-                      force_coop=force_coop)
+    marllib_env_config["env"] = environment_settings["name"]
+    marllib_env_config.pop("name")
 
-    env_config["env_args"]["map_name"] = map_name
-    env_config = set_ray(env_config)
+    marllib_env_config["env_args"] = environment_settings["args"]
+    marllib_env_config.pop("args")
 
-    env_reg_name = env_config["env"] + "_" + env_config["env_args"]["map_name"]
+    marllib_env_config["env_args"]["map_name"] = environment_settings["map"]
+    marllib_env_config = set_ray(marllib_env_config)
 
-    if env_config["force_coop"]:
-        register_env(env_reg_name, lambda _: COOP_ENV_REGISTRY[env_config["env"]](env_config["env_args"]))
-        env = COOP_ENV_REGISTRY[env_config["env"]](env_config["env_args"])
+    env_reg_name = marllib_env_config["env"] + "_" + marllib_env_config["env_args"]["map_name"]
+
+    if marllib_env_config.get("force_coop", False):
+        ray.tune.register_env(env_reg_name, lambda _: COOP_ENV_REGISTRY[marllib_env_config["env"]](marllib_env_config["env_args"]))
+        env = COOP_ENV_REGISTRY[marllib_env_config["env"]](marllib_env_config["env_args"])
     else:
-        register_env(env_reg_name, lambda _: ENV_REGISTRY[env_config["env"]](env_config["env_args"]))
-        env = ENV_REGISTRY[env_config["env"]](env_config["env_args"])
+        ray.tune.register_env(env_reg_name, lambda _: ENV_REGISTRY[marllib_env_config["env"]](marllib_env_config["env_args"]))
+        env = ENV_REGISTRY[marllib_env_config["env"]](marllib_env_config["env_args"])
 
-    return env, env_config
+    return env, marllib_env_config

@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import gym
+import numpy as np
 import pettingzoo
 import supersuit
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -36,6 +37,8 @@ class MARLlibWrapper(MultiAgentEnv):
         MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         observation, reward, done, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
+        total_done = np.all(list(done.values()))
+        done["__all__"] = total_done
         return observation, reward, done, info
 
     def close(self):

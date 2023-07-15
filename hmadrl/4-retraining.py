@@ -9,7 +9,7 @@ from ray.rllib.policy.policy import PolicySpec
 
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
-from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config, find_latest_dir
+from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config, find_latest_dir, make_env
 from hmadrl.settings_utils import load_settings, import_user_code
 
 parser = argparse.ArgumentParser(
@@ -36,9 +36,7 @@ inner_algo_cls = RL_REGISTRY[settings['imitation']['inner_algo']['name']]
 humanoid_model = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(humanoid_model_path, 'cpu',
                                                                                 inner_algo_cls)
 
-env = marl.make_env(environment_name=settings['env']['name'],
-                    map_name=settings['env']['map'],
-                    **settings['env']['args'])
+env = make_env(settings['env'])
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **multiagent_params['model']['custom_model_config']['algo_args'])
 model = marl.build_model(env, algo, multiagent_params['model']['custom_model_config']['model_arch_args'])
