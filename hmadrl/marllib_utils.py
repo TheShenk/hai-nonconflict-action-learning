@@ -4,6 +4,7 @@ import pathlib
 from typing import Dict, Tuple, Any, Callable
 
 import cloudpickle
+import gym
 import pettingzoo
 import ray.tune
 from ray.rllib import MultiAgentEnv
@@ -111,14 +112,7 @@ def get_trainer_class(algo_name, config):
     return TRAINER_REGISTER[algo_name]
 
 
-def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any, Dict], local_dir_path: str):
-    env_instance, env_info = env
-    model_class, model_info = model
-
-    checkpoint_path = find_checkpoint(algo.name,
-                                      env_info['env_args']['map_name'],
-                                      model_info['model_arch_args']['core_arch'],
-                                      local_dir_path)
+def load_trainer_from_checkpoint(checkpoint_path, custom_model=None):
 
     with open(checkpoint_path, 'rb') as checkpoint_file:
         checkpoint = cloudpickle.load(checkpoint_file)
@@ -130,6 +124,10 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
 
     worker = cloudpickle.loads(checkpoint['worker'])
     policies: Dict[str, PolicySpec] = worker['policy_specs']
+
+    policy_name = list(policies.keys())[0]
+    observation_space = policies[policy_name].observation_space
+    action_space = policies[policy_name].action_space
 
     recursive_dict_update(params,
                           {
@@ -147,18 +145,34 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     # This line could be in dict_update but standatr vd configs have policies of type string, not dict. Because of
     # this recursive_dict_update will throw exception.
     params["multiagent"]["policies"] = policies
-    params["model"]["custom_model_config"]["space_obs"] = env_instance.observation_space
-    params["model"]["custom_model_config"]["space_act"] = env_instance.action_space
+    params["model"]["custom_model_config"]["space_obs"] = gym.spaces.Dict({"obs": observation_space})
+    params["model"]["custom_model_config"]["space_act"] = action_space
+
+    if custom_model is not None:
+        params["model"]["custom_model"] = "current_model"
+
+    trainer_cls = get_trainer_class(params["model"]["custom_model_config"]["algorithm"], params)
+    trainer = trainer_cls(params)
+    trainer.restore(checkpoint_path)
+    return trainer
+
+
+def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any, Dict], local_dir_path: str):
+    env_instance, env_info = env
+    model_class, model_info = model
+
+    checkpoint_path = find_checkpoint(algo.name,
+                                      env_info['env_args']['map_name'],
+                                      model_info['model_arch_args']['core_arch'],
+                                      local_dir_path)
+    custom_model = None
     if algo.name in {'iddpg', 'maddpg', 'facmac'}:
         ModelCatalog.register_custom_model("DDPG_Model", model_class)
     else:
         ModelCatalog.register_custom_model("current_model", model_class)
-        params["model"]["custom_model"] = "current_model"
+        custom_model = "current_model"
 
-    trainer_cls = get_trainer_class(algo.name, params)
-    trainer = trainer_cls(params)
-    trainer.restore(checkpoint_path)
-    return trainer
+    return load_trainer_from_checkpoint(checkpoint_path, custom_model)
 
 
 def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
