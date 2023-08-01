@@ -1,4 +1,3 @@
-import pathlib
 from typing import Dict, Type
 
 from imitation.algorithms.adversarial.airl import AIRL
@@ -8,9 +7,11 @@ from imitation.algorithms.density import DensityAlgorithm
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.logger import configure
 from imitation.util.networks import RunningNorm
-from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
+
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.policies import BasePolicy
+from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
+from sb3_contrib import TRPO, ARS, QRDQN, TQC
 
 
 class ImitationTrainer:
@@ -149,10 +150,14 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
 }
 
 RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
+    "ars": ARS,
     "a2c": A2C,
     "ddpg": DDPG,
     "dqn": DQN,
     "ppo": PPO,
+    "qr-dqn": QRDQN,
     "sac": SAC,
     "td3": TD3,
+    "tqc": TQC,
+    "trpo": TRPO
 }
