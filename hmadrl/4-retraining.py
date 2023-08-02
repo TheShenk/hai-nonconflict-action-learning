@@ -9,7 +9,7 @@ from ray.rllib.policy.policy import PolicySpec
 
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
-from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_cc_config, find_latest_dir, make_env
+from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_config, find_latest_dir, make_env
 from hmadrl.settings_utils import load_settings, import_user_code
 
 parser = argparse.ArgumentParser(
@@ -50,6 +50,10 @@ policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class))
 policy_mapping = create_policy_mapping(env_instance)
 policy_mapping[settings["rollout"]["human_agent"]] = "human"
 
+policies_to_train = settings["retraining"].get("policies_to_train", env_instance.agents)
+policies_to_train = [policy_mapping[agent_id] for agent_id in policies_to_train]
+assert "human" not in policies_to_train, "Don't specify human_agent in policies_to_train"
+
 
 def policy_mapping_fn(agent_id):
     return policy_mapping[agent_id]
@@ -66,7 +70,11 @@ exp_info['restore_path'] = {
 }
 exp_info["stop_timesteps"] = settings['retraining']['timesteps']
 exp_info['local_dir'] = settings['save']['retraining_model']
-exp_info, run_config, env_info, stop_config, restore_config = get_cc_config(exp_info, env_instance, None, policies, policy_mapping_fn)
+exp_info, run_config, env_info, stop_config, restore_config = get_config(exp_info, env_instance, None, {
+            "policies": policies,
+            "policy_mapping_fn": policy_mapping_fn,
+            "policies_to_train": policies_to_train
+        })
 
 algo_runner = POlICY_REGISTRY[settings['multiagent']['algo']['name']]
 result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)

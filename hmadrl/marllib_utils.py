@@ -26,14 +26,13 @@ from marllib.marl.algos.core.IL.ddpg import IDDPGTrainer
 from marllib.marl.algos.core.IL.ppo import IPPOTrainer
 from marllib.marl.algos.core.IL.trpo import TRPOTrainer
 from marllib.marl.algos.core.VD.facmac import FACMACTrainer
-from marllib.marl.algos.core.VD.iql_vdn_qmix import JointQTrainer
 from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
 
 from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
 
 
-def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
+def get_config(exp_info, env, stop, multiagent_config):
     env_info = env.get_env_info()
     agent_name_ls = env.agents
     env_info["agent_name_ls"] = agent_name_ls
@@ -45,11 +44,7 @@ def get_cc_config(exp_info, env, stop, policies, policy_mapping_fn):
         "num_gpus_per_worker": exp_info["num_gpus_per_worker"],
         "num_gpus": exp_info["num_gpus"],
         "num_workers": exp_info["num_workers"],
-        "multiagent": {
-            "policies": policies,
-            "policy_mapping_fn": policy_mapping_fn,
-            "policies_to_train": ["policy_1"]
-        },
+        "multiagent": multiagent_config,
         "framework": exp_info["framework"],
         "evaluation_interval": exp_info["evaluation_interval"],
         "simple_optimizer": False  # force using better optimizer
