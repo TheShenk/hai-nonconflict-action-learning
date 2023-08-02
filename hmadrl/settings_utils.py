@@ -27,6 +27,15 @@ def create_inner_algo_from_settings(rollout_env, settings):
     return None
 
 
+def get_inner_algo_class_from_settings(settings):
+    inner_algo_settings = settings.get('inner_algo', None)
+    if inner_algo_settings:
+        inner_algo_name = inner_algo_settings.get('name', None)
+        if inner_algo_name:
+            return RL_REGISTRY[inner_algo_name]
+    return None
+
+
 def import_user_code(filepath):
     import importlib.util
 
