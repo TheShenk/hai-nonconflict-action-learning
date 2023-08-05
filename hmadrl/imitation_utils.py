@@ -2,10 +2,8 @@ import re
 from typing import Dict, Type
 
 import numpy as np
-import stable_baselines3.common.base_class
 from imitation.data.types import TrajectoryWithRew
-from imitation.rewards.reward_nets import ForwardWrapper, PredictProcessedWrapper, RewardNetWithVariance, \
-    NormalizedRewardNet, ShapedRewardNet, AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
+from imitation.rewards.reward_nets import AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
     RewardEnsemble, RewardNet
 from ray.rllib.utils.torch_ops import convert_to_torch_tensor
 from stable_baselines3.common.policies import BasePolicy
@@ -67,12 +65,21 @@ REWARD_NET_WRAPPER_REGISTRY = {
     "AddSTDRewardWrapper": AddSTDRewardWrapper
 }
 
+
 REWARD_NET_REGISTRY: Dict[str, Type[RewardNet]] = {
     "BasicRewardNet": BasicRewardNet,
     "CnnRewardNet": CnnRewardNet,
     "BasicShapedRewardNet": BasicShapedRewardNet,
     "RewardEnsemble": RewardEnsemble
 }
+
+
+def register_reward_net_wrapper(key, wrapper_creator_fn):
+    REWARD_NET_WRAPPER_REGISTRY[key] = wrapper_creator_fn
+
+
+def register_reward_net(key, net_creator_fn):
+    REWARD_NET_REGISTRY[key] = net_creator_fn
 
 
 def get_cls_name(obj):
