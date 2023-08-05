@@ -1,6 +1,6 @@
 import optuna
 from ray import tune
-from yaml import load, dump
+from yaml import load
 
 from hmadrl.imitation_registry import RL_REGISTRY
 

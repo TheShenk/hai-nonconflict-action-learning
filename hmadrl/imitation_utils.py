@@ -1,8 +1,12 @@
 import re
+from typing import Dict, Type
 
 import numpy as np
 import stable_baselines3.common.base_class
 from imitation.data.types import TrajectoryWithRew
+from imitation.rewards.reward_nets import ForwardWrapper, PredictProcessedWrapper, RewardNetWithVariance, \
+    NormalizedRewardNet, ShapedRewardNet, AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
+    RewardEnsemble, RewardNet
 from ray.rllib.utils.torch_ops import convert_to_torch_tensor
 from stable_baselines3.common.policies import BasePolicy
 
@@ -55,3 +59,70 @@ def init_as_multiagent(imitation_policy: BasePolicy, rllib_policy):
                 imitation_weights[imitation_layer] = convert_to_torch_tensor(rllib_weights[rllib_layer])
 
     imitation_policy.load_state_dict(imitation_weights)
+
+
+REWARD_NET_WRAPPER_REGISTRY = {
+    # "NormalizedRewardNet": NormalizedRewardNet, #TODO: how create layer from settings?
+    # "ShapedRewardNet": ShapedRewardNet, # TODO: how create callable from settings?
+    "AddSTDRewardWrapper": AddSTDRewardWrapper
+}
+
+REWARD_NET_REGISTRY: Dict[str, Type[RewardNet]] = {
+    "BasicRewardNet": BasicRewardNet,
+    "CnnRewardNet": CnnRewardNet,
+    "BasicShapedRewardNet": BasicShapedRewardNet,
+    "RewardEnsemble": RewardEnsemble
+}
+
+
+def get_cls_name(obj):
+    if isinstance(obj, dict):
+        return list(obj.keys())[0]
+    else:
+        return obj
+
+
+def get_cls_kwargs(obj, cls_name):
+    if isinstance(obj, dict):
+        return obj[cls_name]
+    else:
+        return {}
+
+
+def create_reward_net(reward_net_settings, observation_space, action_space):
+
+    reward_net_cls_name = get_cls_name(reward_net_settings) if reward_net_settings else "BasicRewardNet"
+    reward_net_kwargs = get_cls_kwargs(reward_net_settings, reward_net_cls_name)
+
+    if reward_net_cls_name == "RewardEnsemble":
+        assert "members" in reward_net_kwargs, "Ensemble must be initiated with list of nets (member argument)"
+        members = [create_wrapped_reward_net(member_settings["reward_net"], observation_space, action_space)
+                   for member_settings in reward_net_kwargs["members"]]
+        reward_net_kwargs["members"] = members
+
+    reward_net = REWARD_NET_REGISTRY[reward_net_cls_name](
+        observation_space,
+        action_space,
+        **reward_net_kwargs
+    )
+
+    return reward_net
+
+
+def create_wrapped_reward_net(reward_net_settings, observation_space, action_space):
+
+    result_net = create_reward_net(reward_net_settings[0], observation_space, action_space)
+    for wrapper_cls_settings in reward_net_settings[1:]:
+
+        wrapper_cls_name = get_cls_name(wrapper_cls_settings)
+
+        wrapper_kwargs = {}
+        if isinstance(wrapper_cls_settings, dict):
+            wrapper_kwargs = wrapper_cls_settings[wrapper_cls_name]
+
+        result_net = REWARD_NET_WRAPPER_REGISTRY[wrapper_cls_name](
+            result_net,
+            **wrapper_kwargs
+        )
+
+    return result_net
