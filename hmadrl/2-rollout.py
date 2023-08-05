@@ -18,7 +18,7 @@ env_instance, _ = env
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                           **settings['multiagent']['algo']['args'])
 model = marl.build_model(env, algo, settings['multiagent']['model'])
-trainer = load_trainer(algo, env, model, settings['save']['multiagent_model'])
+trainer = load_trainer(algo, env, model, settings['save']['multiagent'])
 
 policy_mapping = create_policy_mapping(env_instance)
 policy_mapping = {agent_id: trainer.get_policy(policy_id) for agent_id, policy_id in policy_mapping.items()}

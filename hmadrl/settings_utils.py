@@ -1,8 +1,11 @@
+import pathlib
+
 import optuna
 from ray import tune
 from yaml import load
 
 from hmadrl.imitation_registry import RL_REGISTRY
+from hmadrl.marllib_utils import find_checkpoint_in_dir
 
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -98,3 +101,17 @@ def load_optuna_settings(settings: dict, trial: optuna.Trial, name='imitation'):
             optuna_settings[key] = value
 
     return optuna_settings
+
+
+def get_save_settings(settings):
+
+    if isinstance(settings, dict):
+        local_dir = settings["dir"]
+        checkpoint_dir = pathlib.Path(settings["checkpoint"])
+
+        model_path = find_checkpoint_in_dir(checkpoint_dir)
+        params_path = checkpoint_dir / ".." / "params.json"
+
+        return settings["dir"], dict(model_path=str(model_path), params_path=str(params_path))
+    else:
+        return settings, dict(model_path="", params_path="")

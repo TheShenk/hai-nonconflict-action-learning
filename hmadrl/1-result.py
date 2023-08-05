@@ -4,7 +4,7 @@ import pathlib
 from marllib import marl
 
 from hmadrl.marllib_utils import make_env, find_checkpoint
-from hmadrl.settings_utils import load_settings, load_tune_settings, import_user_code
+from hmadrl.settings_utils import load_settings, load_tune_settings, import_user_code, get_save_settings
 
 parser = argparse.ArgumentParser(description='Learning agent in environment. First step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
@@ -19,17 +19,19 @@ env = make_env(settings['env'])
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
 model = marl.build_model(env, algo, model_settings)
 
+local_dir, _ = get_save_settings(settings['save']['multiagent'])
 checkpoint_path = find_checkpoint(algo.name,
                                   env[1]['env_args']['map_name'],
                                   model[1]['model_arch_args']['core_arch'],
-                                  settings['save']['multiagent_model'])
+                                  local_dir)
 params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
-local_dir = pathlib.Path(settings['save']['multiagent_model']) / 'results'
+local_dir = pathlib.Path(local_dir) / 'results'
 
 algo.render(env, model,
             share_policy='individual',
             local_dir=str(local_dir),
             restore_path={
                 'params_path': str(params_path),
-                'model_path': str(checkpoint_path)
+                'model_path': str(checkpoint_path),
+                'render': True
             })

@@ -10,7 +10,7 @@ from ray.rllib.policy.policy import PolicySpec
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_config, find_latest_dir, make_env
-from hmadrl.settings_utils import load_settings, import_user_code
+from hmadrl.settings_utils import load_settings, import_user_code, get_save_settings
 
 parser = argparse.ArgumentParser(
     description='Retrain learned agents to play with human. Fourth step of HMADRL algorithm.')
@@ -20,12 +20,17 @@ args = parser.parse_args()
 settings = load_settings(args.settings)
 import_user_code(settings["code"])
 
-checkpoint_path = find_checkpoint(settings['multiagent']['algo']['name'],
-                                  settings['env']['map'],
-                                  settings['multiagent']['model']['core_arch'],
-                                  settings['save']['multiagent_model'])
-model_path = checkpoint_path
-params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
+local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
+model_path, params_path = restore_path["model_path"], restore_path["params_path"]
+
+if not model_path:
+    checkpoint_path = find_checkpoint(settings['multiagent']['algo']['name'],
+                                      settings['env']['map'],
+                                      settings['multiagent']['model']['core_arch'],
+                                      local_dir)
+    model_path = checkpoint_path
+    params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
+
 with open(params_path, 'r') as params_file:
     multiagent_params = json.load(params_file)
 

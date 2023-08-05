@@ -30,6 +30,7 @@ from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
 
 from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
+from hmadrl.settings_utils import get_save_settings
 
 
 def get_config(exp_info, env, stop, multiagent_config):
@@ -67,6 +68,12 @@ def find_latest_dir(dir: pathlib.Path, filter_fn: Callable[[pathlib.Path], bool]
     return subdirs[-1]
 
 
+def find_checkpoint_in_dir(checkpoint_dir: pathlib.Path):
+    checkpoint = [item for item in checkpoint_dir.iterdir() if not item.name.startswith('.') and not item.suffixes]
+    assert len(checkpoint) == 1, checkpoint
+    return checkpoint[0]
+
+
 def find_checkpoint(algo_name: str, map_name: str, core_arch: str, local_dir_path: str):
     local_dir = pathlib.Path(local_dir_path)
     model_dir = find_latest_dir(local_dir,
@@ -74,9 +81,7 @@ def find_checkpoint(algo_name: str, map_name: str, core_arch: str, local_dir_pat
                                              item.name.startswith(f"{algo_name}_{core_arch}_{map_name}"))
     experiment_dir = find_latest_dir(model_dir, lambda item: item.is_dir())
     checkpoint_dir = find_latest_dir(experiment_dir, lambda item: item.is_dir())
-    checkpoint = [item for item in checkpoint_dir.iterdir() if not item.name.startswith('.') and not item.suffixes]
-    assert len(checkpoint) == 1, checkpoint
-    return str(checkpoint[0])
+    return str(find_checkpoint_in_dir(checkpoint_dir))
 
 
 def get_trainer_class(algo_name, config):
@@ -152,14 +157,17 @@ def load_trainer_from_checkpoint(checkpoint_path, custom_model=None):
     return trainer
 
 
-def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any, Dict], local_dir_path: str):
+def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any, Dict], multiagent_save_settings):
     env_instance, env_info = env
     model_class, model_info = model
 
-    checkpoint_path = find_checkpoint(algo.name,
-                                      env_info['env_args']['map_name'],
-                                      model_info['model_arch_args']['core_arch'],
-                                      local_dir_path)
+    local_dir, restore_path = get_save_settings(multiagent_save_settings)
+    checkpoint_path = restore_path["model_path"]
+    if not checkpoint_path:
+        checkpoint_path = find_checkpoint(algo.name,
+                                          env_info['env_args']['map_name'],
+                                          model_info['model_arch_args']['core_arch'],
+                                          local_dir)
     custom_model = None
     if algo.name in {'iddpg', 'maddpg', 'facmac'}:
         ModelCatalog.register_custom_model("DDPG_Model", model_class)
