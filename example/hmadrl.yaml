@@ -1,0 +1,53 @@
+---
+env:
+  name: myfootball
+  map: full
+  args: {}
+  mask_flag: False
+  global_state_flag: False
+  opp_action_in_cc: False
+  agent_level_batch_update: True
+
+multiagent:
+  timesteps: 10000
+  model:
+    core_arch: mlp
+    encode_layer: "128-256"
+  algo:
+    name: matrpo
+    args: {}
+
+rollout:
+  episodes: 5
+  human_agent: red_0
+
+imitation:
+  timesteps: 10000
+  algo:
+    name: airl
+    args:
+      demo_batch_size: 1024
+  inner_algo:
+    use_multiagent_init: True
+    name: trpo
+    args:
+      policy_kwargs:
+        net_arch: [128, 256]
+      policy: MlpPolicy
+      device: cpu
+
+retraining:
+  policies_to_train: ["red_1"]
+  timesteps: 10000
+
+result:
+  episodes: 5
+
+save:
+  multiagent: example_multiagent
+  trajectory: example_human.npz
+  human_model: example_humanoid
+  retraining_model: example_retraining
+
+code: ./football.py
+...
