@@ -30,7 +30,7 @@ from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
 
 from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
-from hmadrl.settings_utils import get_save_settings
+from hmadrl.settings_utils import get_save_settings, find_checkpoint_in_dir
 
 
 def get_config(exp_info, env, stop, multiagent_config):
@@ -66,12 +66,6 @@ def find_latest_dir(dir: pathlib.Path, filter_fn: Callable[[pathlib.Path], bool]
     subdirs = [item for item in dir.iterdir() if filter_fn(item)]
     subdirs.sort(key=lambda subdir: os.path.getmtime(subdir))
     return subdirs[-1]
-
-
-def find_checkpoint_in_dir(checkpoint_dir: pathlib.Path):
-    checkpoint = [item for item in checkpoint_dir.iterdir() if not item.name.startswith('.') and not item.suffixes]
-    assert len(checkpoint) == 1, checkpoint
-    return checkpoint[0]
 
 
 def find_checkpoint(algo_name: str, map_name: str, core_arch: str, local_dir_path: str):
@@ -162,12 +156,11 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     model_class, model_info = model
 
     local_dir, restore_path = get_save_settings(multiagent_save_settings)
-    checkpoint_path = restore_path["model_path"]
-    if not checkpoint_path:
-        checkpoint_path = find_checkpoint(algo.name,
-                                          env_info['env_args']['map_name'],
-                                          model_info['model_arch_args']['core_arch'],
-                                          local_dir)
+    checkpoint_path = find_checkpoint(algo.name,
+                                      env_info['env_args']['map_name'],
+                                      model_info['model_arch_args']['core_arch'],
+                                      local_dir)
+
     custom_model = None
     if algo.name in {'iddpg', 'maddpg', 'facmac'}:
         ModelCatalog.register_custom_model("DDPG_Model", model_class)

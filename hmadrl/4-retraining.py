@@ -43,7 +43,7 @@ humanoid_model = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(
 
 env = make_env(settings['env'])
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
-                                                          **multiagent_params['model']['custom_model_config']['algo_args'])
+                                                          **multiagent_params['model']['custom_model_config'].get('algo_args', {}))
 model = marl.build_model(env, algo, multiagent_params['model']['custom_model_config']['model_arch_args'])
 
 env_instance, env_info = env

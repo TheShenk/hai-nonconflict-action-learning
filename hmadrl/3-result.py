@@ -1,20 +1,16 @@
 import argparse
-import json
 import pathlib
-from time import time
 
 import numpy as np
-import optuna
 from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
-from hmadrl.imitation_utils import make_trajectories, init_as_multiagent
+from hmadrl.imitation_utils import make_trajectories
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env, find_latest_dir
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings, \
-    import_user_code, get_inner_algo_class_from_settings
+from hmadrl.settings_utils import load_settings, import_user_code, get_inner_algo_class_from_settings
 
 parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
@@ -48,5 +44,5 @@ assert inner_algo_cls is not None, "Specified inner_algo is not supported"
 rng = np.random.default_rng(0)
 trainer = IMITATION_REGISTRY[settings["imitation"]['algo']['name']]
 policy = trainer.load(str(checkpoint_path / "model.zip"), 'cpu', inner_algo_cls)
-mean, std = evaluate_policy(policy, rollout_env, render=True, n_eval_episodes=1)
+mean, std = evaluate_policy(policy, rollout_env, render=True, n_eval_episodes=5)
 print("Eval:", mean, std)
