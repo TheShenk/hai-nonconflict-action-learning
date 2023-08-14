@@ -88,10 +88,6 @@ class BCTrainer(ImitationTrainer):
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
     def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy, algo_args, path):
         super().__init__(venv, demonstrations, rng, inner_algo, algo_args, path)
-        # TODO: настройки RewardNet. Сложность - для них существуют свои оболочки, то есть не очень понятно как
-        #  указать какой вид сети использовать.
-        #  Указывать массив используемых оболочек?
-        #  Определить в импортирумом python-файле?
         self.reward_net = BasicRewardNet(
             venv.observation_space,
             venv.action_space,

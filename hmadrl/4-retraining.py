@@ -50,7 +50,7 @@ env_instance, env_info = env
 model_class, model_info = model
 
 policies = {f'policy_{agent_num}': PolicySpec() for agent_num, agent_id in enumerate(env_instance.agents) if agent_id != settings["rollout"]["human_agent"]}
-policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class))
+policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class, len(env_instance.agents)))
 
 policy_mapping = create_policy_mapping(env_instance)
 policy_mapping[settings["rollout"]["human_agent"]] = "human"

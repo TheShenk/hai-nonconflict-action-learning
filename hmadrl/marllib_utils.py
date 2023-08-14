@@ -83,11 +83,11 @@ def get_trainer_class(algo_name, config):
         'ippo': IPPOTrainer,
         'mappo': MAPPOTrainer,
         'vdppo': VDPPOTrainer,
-        'happo': HAPPOTrainer(config), # FIXME: step 4
+        'happo': HAPPOTrainer(config),
 
         'itrpo': TRPOTrainer,
         'matrpo': MATRPOTrainer,
-        'hatrpo': HATRPOTrainer, # FIXME: step 4
+        'hatrpo': HATRPOTrainer,
 
         'ia2c': IA2CTrainer,
         'maa2c': MAA2CTrainer,
@@ -95,8 +95,10 @@ def get_trainer_class(algo_name, config):
         'vda2c': VDA2CTrainer,
 
         'iddpg': IDDPGTrainer,
-        'maddpg': MADDPGTrainer, # FIXME: step 4
-        'facmac': FACMACTrainer, # FIXME: step 4
+        # 'maddpg': MADDPGTrainer, # MADDPG and FACMAC can't be run becouse of before_learn_on_batch in
+        # marl/algos/utils/centralized_Q. It calls in maddpg.py and assume that all policies from backup is learning.
+        # That wrong in case of HMADRL as at step 4 human policies don't learn.
+        # 'facmac': FACMACTrainer,
 
         # 'iql': JointQTrainer,  # Don't support individual learning
         # 'vdn': JointQTrainer,  # Don't support individual learning
