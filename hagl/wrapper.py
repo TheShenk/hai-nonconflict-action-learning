@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import SupportsFloat, Any, Callable
 
 import gymnasium
-import pettingzoo
 from gymnasium.core import WrapperActType, WrapperObsType, RenderFrame, ObsType
+import pettingzoo
 
 import hagl
+from hagl.convert_space import convert_space
 
 
 class HAGLWrapper(gymnasium.Env):
@@ -136,12 +137,72 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
     def action_space(self, agent):
         hagl_action_space = self.env.action_space(agent)
         gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
-        return gymnasium.spaces.flatten_space(gymnasium_action_space)
+        return convert_space(gymnasium.spaces.flatten_space(gymnasium_action_space))
 
     def observation_space(self, agent):
         hagl_observation_space = self.env.observation_space(agent)
         gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
-        return gymnasium.spaces.flatten_space(gymnasium_observation_space)
+        return convert_space(gymnasium.spaces.flatten_space(gymnasium_observation_space))
+
+
+class HAGLAECWrapper(pettingzoo.AECEnv):
+
+    def __init__(self, env, template_values=None):
+        super().__init__()
+
+        if template_values is None:
+            template_values = dict()
+
+        self.env = env
+        self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+        self.template_values.update(template_values)
+
+    def __getattr__(self, name: str) -> Any:
+        """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
+        if name == "_np_random":
+            raise AttributeError(
+                "Can't access `_np_random` of a wrapper, use `self.unwrapped._np_random` or `self.np_random`."
+            )
+        elif name.startswith("_") and name not in {"_cumulative_rewards"}:
+            raise AttributeError(f"accessing private attribute '{name}' is prohibited")
+        return getattr(self.env, name)
+
+    def _process_observation(self, agent_id, hagl_observation):
+        hagl_observation_space = self.env.observation_space(agent_id)
+        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
+        gymnasium_observation = hagl.deconstruct(hagl_observation_space, hagl_observation, self.template_values)
+        return gymnasium.spaces.flatten(gymnasium_observation_space, gymnasium_observation)
+
+    def _process_action(self, agent_id, action):
+        hagl_action_space = self.env.action_space(agent_id)
+        gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
+        gymnasium_action = gymnasium.spaces.unflatten(gymnasium_action_space, action)
+        return hagl.construct(hagl_action_space, gymnasium_action, self.template_values)
+
+    def reset(self):
+        self.env.reset()
+
+    def step(self, action):
+        self.env.step(self._process_action(self.env.agent_selection, action))
+
+    def observe(self, agent):
+        return self._process_observation(agent, self.env.observe(agent))
+
+    def render(self, mode: str = "human") -> RenderFrame | list[RenderFrame] | None:
+        return self.env.render(mode)
+
+    def action_space(self, agent):
+        hagl_action_space = self.env.action_space(agent)
+        gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
+        return convert_space(gymnasium.spaces.flatten_space(gymnasium_action_space))
+
+    def observation_space(self, agent):
+        hagl_observation_space = self.env.observation_space(agent)
+        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
+        return convert_space(gymnasium.spaces.flatten_space(gymnasium_observation_space))
+
+    def close(self):
+        self.env.close()
 
 
 class HAGLModel:
