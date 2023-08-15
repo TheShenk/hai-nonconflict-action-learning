@@ -31,8 +31,10 @@ def try_as_syntax_shugar(val):
 def isfunction(obj):
     return callable(obj) and not isinstance(obj, type)
 
+
 def allowed_var(name, value):
     return (not name.startswith("__")) and (not isfunction(value))
+
 
 def get_hagl_vars(hagl_type):
 
@@ -73,6 +75,15 @@ def compile(observation, action, template_values):
     compiled_action = compile_type(action, hagl_template_values)
 
     return compiled_observation, compiled_action
+
+
+def compile_one(space, template_values):
+    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+    hagl_template_values.update(template_values)
+
+    compiled_space = compile_type(space, hagl_template_values)
+
+    return compiled_space
 
 
 def _construct(hagl_type, gym_dict_value, template_values):
