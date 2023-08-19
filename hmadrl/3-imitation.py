@@ -8,11 +8,12 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
-from hmadrl.imitation_utils import make_trajectories, init_as_multiagent
+from hmadrl.imitation_utils import make_trajectories, init_as_multiagent, create_wrapped_reward_net, \
+    create_imitation_models_from_settings
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, create_inner_algo_from_settings, load_optuna_settings, import_user_code
-
+from hmadrl.settings_utils import load_settings, load_optuna_settings, \
+    import_user_code, get_save_dir
 
 parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
@@ -45,20 +46,20 @@ rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 def objective(trial: optuna.Trial):
 
     optuna_settings = load_optuna_settings(settings['imitation'], trial)
-    inner_algo = create_inner_algo_from_settings(rollout_env, optuna_settings)
+    inner_algo, reward_net = create_imitation_models_from_settings(settings, rollout_env, optuna_settings)
 
     use_multiagent_init = settings['imitation']['inner_algo'].get('use_multiagent_init', False)
     if use_multiagent_init:
         init_as_multiagent(inner_algo.policy, human_policy)
 
-    path = f"{settings['save']['human_model']}/{optuna_settings['algo']['name']}-{int(time())}-{trial.number}"
+    path = f"{get_save_dir(settings['save']['human_model'])}/{optuna_settings['algo']['name']}-{int(time())}-{trial.number}"
 
     trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo,
-                                                                  optuna_settings['algo']['args'], path)
+                                                                  reward_net, optuna_settings['algo']['args'], path)
     trainer.train(settings['imitation']['timesteps'])
     trainer.save()
 
-    policy = trainer.load(f"{path}/model.zip", 'cpu', type(inner_algo))
+    policy, _ = trainer.load(path, 'cpu', type(inner_algo))
     mean, std = evaluate_policy(policy, rollout_env)
     return mean
 

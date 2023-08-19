@@ -4,8 +4,6 @@ import optuna
 from ray import tune
 from yaml import load
 
-from hmadrl.imitation_registry import RL_REGISTRY
-
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
@@ -16,26 +14,6 @@ def load_settings(path: str):
     with open(path, 'r') as settings_file:
         settings = load(settings_file, Loader=Loader)
     return settings
-
-
-def create_inner_algo_from_settings(rollout_env, settings):
-    inner_algo_settings = settings.get('inner_algo', None)
-    if inner_algo_settings:
-        inner_algo_name = inner_algo_settings.get('name', None)
-        if inner_algo_name:
-            inner_algo_cls = RL_REGISTRY[inner_algo_name]
-            inner_algo_args = inner_algo_settings.get('args', {})
-            return inner_algo_cls(env=rollout_env, **inner_algo_args)
-    return None
-
-
-def get_inner_algo_class_from_settings(settings):
-    inner_algo_settings = settings.get('inner_algo', None)
-    if inner_algo_settings:
-        inner_algo_name = inner_algo_settings.get('name', None)
-        if inner_algo_name:
-            return RL_REGISTRY[inner_algo_name]
-    return None
 
 
 def import_user_code(filepath):
@@ -120,3 +98,10 @@ def get_save_settings(settings):
         return settings["dir"], dict(model_path=str(model_path), params_path=str(params_path))
     else:
         return settings, dict(model_path="", params_path="")
+
+
+def get_save_dir(settings):
+    if isinstance(settings, dict):
+        return settings["dir"]
+    else:
+        return settings

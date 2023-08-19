@@ -10,7 +10,7 @@ from ray.rllib.policy.policy import PolicySpec
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_config, find_latest_dir, make_env
-from hmadrl.settings_utils import load_settings, import_user_code, get_save_settings
+from hmadrl.settings_utils import load_settings, import_user_code, get_save_settings, get_save_dir
 
 parser = argparse.ArgumentParser(
     description='Retrain learned agents to play with human. Fourth step of HMADRL algorithm.')
@@ -34,12 +34,12 @@ if not model_path:
 with open(params_path, 'r') as params_file:
     multiagent_params = json.load(params_file)
 
-experiment_path = find_latest_dir(pathlib.Path(settings['save']['human_model']), lambda obj: obj.is_dir())
-humanoid_model_path = str(experiment_path / 'model.zip')
+experiment_path = find_latest_dir(pathlib.Path(get_save_dir(settings['save']['human_model'])), lambda obj: obj.is_dir())
+humanoid_model_path = str(experiment_path)
 
 inner_algo_cls = RL_REGISTRY[settings['imitation']['inner_algo']['name']]
-humanoid_model = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(humanoid_model_path, 'cpu',
-                                                                                inner_algo_cls)
+humanoid_model, _ = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(humanoid_model_path, 'cpu',
+                                                                                   inner_algo_cls)
 
 env = make_env(settings['env'])
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",

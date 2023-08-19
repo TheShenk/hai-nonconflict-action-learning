@@ -1,12 +1,17 @@
+import pathlib
 import re
 from typing import Dict, Type
 
 import numpy as np
+import torch as th
+
 from imitation.data.types import TrajectoryWithRew
 from imitation.rewards.reward_nets import AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
     RewardEnsemble, RewardNet
 from ray.rllib.utils.torch_ops import convert_to_torch_tensor
 from stable_baselines3.common.policies import BasePolicy
+
+from hmadrl.imitation_registry import RL_REGISTRY, IMITATION_REGISTRY
 
 
 def make_trajectories(trajectories_data: np.ndarray):
@@ -118,6 +123,9 @@ def create_reward_net(reward_net_settings, observation_space, action_space):
 
 def create_wrapped_reward_net(reward_net_settings, observation_space, action_space):
 
+    if reward_net_settings is None:
+        return create_reward_net("BasicRewardNet", observation_space, action_space)
+
     result_net = create_reward_net(reward_net_settings[0], observation_space, action_space)
     for wrapper_cls_settings in reward_net_settings[1:]:
 
@@ -133,3 +141,39 @@ def create_wrapped_reward_net(reward_net_settings, observation_space, action_spa
         )
 
     return result_net
+
+
+def create_inner_algo_from_settings(rollout_env, settings):
+    inner_algo_settings = settings.get('inner_algo', None)
+    if inner_algo_settings:
+        inner_algo_name = inner_algo_settings.get('name', None)
+        if inner_algo_name:
+            inner_algo_cls = RL_REGISTRY[inner_algo_name]
+            inner_algo_args = inner_algo_settings.get('args', {})
+            return inner_algo_cls(env=rollout_env, **inner_algo_args)
+    return None
+
+
+def get_inner_algo_class_from_settings(settings):
+    inner_algo_settings = settings.get('inner_algo', None)
+    if inner_algo_settings:
+        inner_algo_name = inner_algo_settings.get('name', None)
+        if inner_algo_name:
+            return RL_REGISTRY[inner_algo_name]
+    return None
+
+
+def create_imitation_models_from_settings(settings, env, optuna_settings):
+
+    if isinstance(settings["save"]["human_model"], str):
+        inner_algo = create_inner_algo_from_settings(env, optuna_settings)
+        reward_net = create_wrapped_reward_net(settings["imitation"].get("reward_net", None),
+                                               env.observation_space, env.action_space)
+        return inner_algo, reward_net
+    else:
+        checkpoint_path = settings["save"]["human_model"]["checkpoint"]
+        inner_algo_cls = get_inner_algo_class_from_settings(settings["imitation"])
+
+        trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']]
+        inner_algo, reward_net = trainer.load(checkpoint_path, 'cpu', inner_algo_cls)
+        return inner_algo, reward_net

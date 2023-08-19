@@ -1,29 +1,33 @@
+import pathlib
 from typing import Dict, Type
+
+import torch as th
 
 from imitation.algorithms.adversarial.airl import AIRL
 from imitation.algorithms.adversarial.gail import GAIL
 from imitation.algorithms import bc
 from imitation.algorithms.density import DensityAlgorithm
-from imitation.rewards.reward_nets import BasicRewardNet
+# from imitation.algorithms.sqil import SQIL #TODO: when PyPi version will be updated
+from imitation.policies.base import FeedForward32Policy, SAC1024Policy, ZeroPolicy, RandomPolicy
 from imitation.util.logger import configure
-from imitation.util.networks import RunningNorm
 
 from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
 from sb3_contrib import TRPO, ARS, QRDQN, TQC
 
 
 class ImitationTrainer:
 
-    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args, path):
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
         self.venv = venv
         self.demonstrations = demonstrations
         self.rng = rng
         self.inner_algo = inner_algo
+        self.reward_net = reward_net
         self.algo_args = algo_args
-        self.path = path
-        self.model_path = f"{path}/model.zip"
+        self.path = pathlib.Path(path)
+        self.model_path = str(self.path / "model.zip")
+        self.reward_net_path = str(self.path / "reward_net.pt")
         self.logger = configure(self.path, ('tensorboard',))
 
     @staticmethod
@@ -38,9 +42,8 @@ class ImitationTrainer:
 
 
 class BaseImitationTrainer(ImitationTrainer):
-    def __init__(self, algo, venv, demonstrations, rng, inner_algo, algo_args, path):
-        super().__init__(venv, demonstrations, rng, inner_algo, algo_args, path)
-        self.inner_algo = inner_algo
+    def __init__(self, algo, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
         self.trainer = algo(
             venv=venv,
             demonstrations=demonstrations,
@@ -51,10 +54,13 @@ class BaseImitationTrainer(ImitationTrainer):
         )
 
     @staticmethod
-    def load(path, device, inner_algo_cls: Type[BasePolicy]):
-        return inner_algo_cls.load(path=path, device=device)
+    def load(checkpoint_path: str, device, inner_algo=None):
+        checkpoint_path = pathlib.Path(checkpoint_path)
+        return (inner_algo.load(path=str(checkpoint_path / "model.zip"), device=device),
+                th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
+        th.save(self.reward_net, self.reward_net_path)
         self.inner_algo.save(self.model_path)
 
     def train(self, timesteps):
@@ -63,22 +69,26 @@ class BaseImitationTrainer(ImitationTrainer):
 
 class BCTrainer(ImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args, path):
-        super().__init__(venv, demonstrations, rng, inner_algo, algo_args, path)
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
         self.trainer = bc.BC(
             observation_space=venv.observation_space,
             action_space=venv.action_space,
             demonstrations=demonstrations,
             rng=rng,
             custom_logger=self.logger,
+            policy=inner_algo,
             **algo_args
         )
 
     @staticmethod
-    def load(path, device, inner_algo=None):
-        return bc.reconstruct_policy(path, device)
+    def load(checkpoint_path: str, device, inner_algo=None):
+        checkpoint_path = pathlib.Path(checkpoint_path)
+        return (bc.reconstruct_policy(str(checkpoint_path / "model.zip"), device),
+                th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
+        th.save(self.reward_net, self.reward_net_path)
         self.trainer.save_policy(self.model_path)
 
     def train(self, epochs):
@@ -86,14 +96,8 @@ class BCTrainer(ImitationTrainer):
 
 
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
-    def __init__(self, algo, venv, demonstrations, rng, inner_algo: BasePolicy, algo_args, path):
-        super().__init__(venv, demonstrations, rng, inner_algo, algo_args, path)
-        self.reward_net = BasicRewardNet(
-            venv.observation_space,
-            venv.action_space,
-            normalize_input_layer=RunningNorm,
-        )
-        self.inner_algo = inner_algo
+    def __init__(self, algo, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
         self.trainer = algo(
             demonstrations=demonstrations,
             venv=venv,
@@ -104,10 +108,13 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
         )
 
     @staticmethod
-    def load(path, device, inner_algo: BasePolicy):
-        return inner_algo.load(path=path, device=device)
+    def load(checkpoint_path: str, device, inner_algo=None):
+        checkpoint_path = pathlib.Path(checkpoint_path)
+        return (inner_algo.load(path=str(checkpoint_path / "model.zip"), device=device),
+                th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
+        th.save(self.reward_net, self.reward_net_path)
         self.inner_algo.save(self.model_path)
 
     def train(self, timesteps):
@@ -116,20 +123,29 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
 
 class GAILTrainer(GenerativeAdversarialImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args, path):
-        super().__init__(GAIL, venv, demonstrations, rng, inner_algo, algo_args, path)
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(GAIL, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
 
 
 class AIRLTrainer(GenerativeAdversarialImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args, path):
-        super().__init__(AIRL, venv, demonstrations, rng, inner_algo, algo_args, path)
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(AIRL, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
 
 
 class DensityTrainer(BaseImitationTrainer):
 
-    def __init__(self, venv, demonstrations, rng, inner_algo, algo_args, path):
-        super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo, algo_args, path)
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
+
+    def train(self, timesteps):
+        self.trainer.train()
+
+
+class SQILTrainer(BaseImitationTrainer):
+
+    def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
+        super().__init__(None, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path) # TODO: Fixme
 
     def train(self, timesteps):
         self.trainer.train()
@@ -140,6 +156,7 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "gail": GAILTrainer,
     "airl": AIRLTrainer,
     "density": DensityTrainer,
+    "sqil": SQILTrainer
     # TODO: dagger (требует слияния 2 и 3 шага),
     #  MCE-IRL (поддерживает только TabularPOMDP среды из библиотеки seals)
     #  DI-engine
@@ -155,5 +172,9 @@ RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
     "sac": SAC,
     "td3": TD3,
     "tqc": TQC,
-    "trpo": TRPO
+    "trpo": TRPO,
+    "ff32": FeedForward32Policy,
+    "sac1024": SAC1024Policy,
+    "zero": ZeroPolicy,
+    "random": RandomPolicy
 }
