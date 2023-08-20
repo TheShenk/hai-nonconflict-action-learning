@@ -77,7 +77,6 @@ class BCTrainer(ImitationTrainer):
             demonstrations=demonstrations,
             rng=rng,
             custom_logger=self.logger,
-            policy=inner_algo,
             **algo_args
         )
 
@@ -155,15 +154,16 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "bc": BCTrainer,
     "gail": GAILTrainer,
     "airl": AIRLTrainer,
-    "density": DensityTrainer,
-    "sqil": SQILTrainer
+    # "density": DensityTrainer, #Incompatible becouse of using gym instead of gymnasium. Maybe will be fixed in future?
+    # "sqil": SQILTrainer #TODO: when imitation version will be updated
     # TODO: dagger (требует слияния 2 и 3 шага),
     #  MCE-IRL (поддерживает только TabularPOMDP среды из библиотеки seals)
     #  DI-engine
 }
 
 RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
-    "ars": ARS,
+    # "ars": ARS, # Incompatible because of evaluating policy before any actions. Conflicts with BufferingWrapper,
+    # used by imitation
     "a2c": A2C,
     "ddpg": DDPG,
     "dqn": DQN,
@@ -172,9 +172,5 @@ RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
     "sac": SAC,
     "td3": TD3,
     "tqc": TQC,
-    "trpo": TRPO,
-    "ff32": FeedForward32Policy,
-    "sac1024": SAC1024Policy,
-    "zero": ZeroPolicy,
-    "random": RandomPolicy
+    "trpo": TRPO
 }

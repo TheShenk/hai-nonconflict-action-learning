@@ -93,6 +93,9 @@ class MultiAgentFootball(ParallelEnv):
 
         return True
 
+    def close(self):
+        pygame.quit()
+
 
 class AECMultiAgentFootball(AECEnv):
 
@@ -190,3 +193,6 @@ class AECMultiAgentFootball(AECEnv):
     ) -> Tuple[Any, float, bool, Dict[str, Any]]:
         obs, rew, done, trunc, info = super().last(observe)
         return obs, rew, done, info
+
+    def close(self):
+        self.env.close()

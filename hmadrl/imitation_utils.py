@@ -2,7 +2,9 @@ import pathlib
 import re
 from typing import Dict, Type
 
+import imitation.policies.base
 import numpy as np
+import stable_baselines3
 import torch as th
 
 from imitation.data.types import TrajectoryWithRew
