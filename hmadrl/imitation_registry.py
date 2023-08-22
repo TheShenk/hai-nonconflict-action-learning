@@ -169,7 +169,7 @@ RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
     "dqn": DQN,
     "ppo": PPO,
     "qr-dqn": QRDQN,
-    "sac": SAC,
+    # "sac": SAC, # Update torch to 1.13 to fix
     "td3": TD3,
     "tqc": TQC,
     "trpo": TRPO

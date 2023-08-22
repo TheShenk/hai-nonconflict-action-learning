@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 import pettingzoo
+import torch as th
 from ray.rllib import MultiAgentEnv
 
 
@@ -9,7 +10,7 @@ class RolloutInfo:
     def __init__(self, policy, prev_action):
         self.policy = policy
         self.prev_action = prev_action
-        self.state = np.zeros((2,))  # TODO: what state size depends on?
+        self.state = th.from_numpy(np.zeros((2,)))  # TODO: what state size depends on?
 
     def predict(self, obs):
         action, state, info = self.policy.compute_single_action(obs=obs,

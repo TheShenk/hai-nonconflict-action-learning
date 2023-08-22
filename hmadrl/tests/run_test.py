@@ -8,8 +8,8 @@ from hmadrl.steps.imitation_step import run as run_step3
 from hmadrl.steps.retraining_step import run as run_step4
 
 
-MULTIAGENT_ALGORITHMS = ['ippo', 'mappo', 'vdppo', 'happo', 'itrpo', 'matrpo', 'hatrpo', 'ia2c', 'maa2c', 'coma',
-                         'vda2c', 'iddpg']
+MULTIAGENT_ALGORITHMS = ['itrpo', 'matrpo', 'hatrpo', 'ippo', 'mappo', 'vdppo', 'happo', 'ia2c', 'maa2c', 'coma',
+                         'vda2c']
 
 IMITATION_ALGORITHMS = list(IMITATION_REGISTRY.keys())
 RL_ALGORITHMS = list(RL_REGISTRY.keys())
@@ -19,8 +19,8 @@ ALL_STEPS_ALGORITHMS = ([(algo, "gail", "ppo") for algo in MULTIAGENT_ALGORITHMS
                         [("mappo", "gail", algo) for algo in RL_ALGORITHMS])
 
 
-def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo):
-    discrete = multiagent_algo == "coma" or imitation_inner_algo in {"dqn" or "qr-dqn"}
+def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo, discrete=False):
+    discrete_name = 'discrete' if discrete else 'not_discrete'
     return {
         "env": {
             "name": "myfootball",
@@ -67,19 +67,21 @@ def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo):
                 "timesteps": 1000
         },
         "save": {
-            "multiagent": "test_multiagent_model",
-            "trajectory": "test_human_discrete.npz" if discrete else "test_human.npz",
-            "human_model": "test_humanoid",
-            "retraining_model": "test_retraining_model"
+            "multiagent": f"test_multiagent_model_{discrete_name}",
+            "trajectory": f"test_human_{discrete_name}.npz",
+            "human_model": f"test_humanoid_{discrete_name}",
+            "retraining_model": f"test_retraining_model_{discrete_name}"
         },
         "code": "../../example/football-discrete.py" if discrete else "../../example/football.py"
     }
 
 
-@pytest.mark.parametrize("algorithm", MULTIAGENT_ALGORITHMS)
+@pytest.mark.parametrize("algorithm", MULTIAGENT_ALGORITHMS + ['mappo-discrete'])
 def test_step1(algorithm):
 
-    settings = create_settings(algorithm, None, None)
+    settings = create_settings(algorithm if algorithm != 'mappo-discrete' else 'mappo',
+                               None, None,
+                               discrete=(algorithm in {'coma', 'mappo-discrete'}))
     try:
         run_step1(settings)
     except Exception as e:
@@ -90,7 +92,8 @@ def test_step1(algorithm):
 
 @pytest.mark.parametrize("algorithm", MULTIAGENT_ALGORITHMS)
 def test_step2(algorithm):
-    settings = create_settings(algorithm, None, None)
+    settings = create_settings(algorithm, None, None,
+                               discrete=algorithm == 'coma')
     try:
         run_step2(settings)
     except Exception as e:
@@ -101,7 +104,8 @@ def test_step2(algorithm):
 
 @pytest.mark.parametrize("multiagent_algorithm,imitation_algorithm,inner_algorithm", ALL_STEPS_ALGORITHMS)
 def test_step3(multiagent_algorithm, imitation_algorithm, inner_algorithm):
-    settings = create_settings(multiagent_algorithm, imitation_algorithm, inner_algorithm)
+    settings = create_settings(multiagent_algorithm, imitation_algorithm, inner_algorithm,
+                               discrete=(inner_algorithm in {"dqn", "qr-dqn"}))
     try:
         run_step3(settings)
     except Exception as e:
@@ -112,7 +116,8 @@ def test_step3(multiagent_algorithm, imitation_algorithm, inner_algorithm):
 
 @pytest.mark.parametrize("multiagent_algorithm,imitation_algorithm,inner_algorithm", ALL_STEPS_ALGORITHMS)
 def test_step4(multiagent_algorithm, imitation_algorithm, inner_algorithm):
-    settings = create_settings(multiagent_algorithm, imitation_algorithm, inner_algorithm)
+    settings = create_settings(multiagent_algorithm, imitation_algorithm, inner_algorithm,
+                               discrete=(multiagent_algorithm == 'coma' or inner_algorithm in {"dqn", "qr-dqn"}))
     try:
         run_step4(settings)
     except Exception as e:

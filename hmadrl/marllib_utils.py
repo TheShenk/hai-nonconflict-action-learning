@@ -94,7 +94,8 @@ def get_trainer_class(algo_name, config):
         'coma': COMATrainer, # Use discrete action space
         'vda2c': VDA2CTrainer,
 
-        'iddpg': IDDPGTrainer,
+        # 'iddpg': IDDPGTrainer, # Can't be restored in ray 1.8.0: https://github.com/ray-project/ray/pull/22245
+        # #TODO: Maybe use another noise?
         # 'maddpg': MADDPGTrainer, # MADDPG and FACMAC can't be run becouse of before_learn_on_batch in
         # marl/algos/utils/centralized_Q. It calls in maddpg.py and assume that all policies from backup is learning.
         # That wrong in case of HMADRL as at step 4 human policies don't learn.
