@@ -14,6 +14,8 @@ from ray.rllib.utils.torch_ops import convert_to_torch_tensor
 from stable_baselines3.common.policies import BasePolicy
 
 from hmadrl.imitation_registry import RL_REGISTRY, IMITATION_REGISTRY
+from hmadrl.marllib_utils import find_latest_dir
+from hmadrl.settings_utils import get_save_dir
 
 
 def make_trajectories(trajectories_data: np.ndarray):
@@ -27,11 +29,11 @@ def make_trajectories(trajectories_data: np.ndarray):
     observation_shift = 0
 
     for previous_done, current_done in zip(np.append([0], done_indexes[:-1]), done_indexes):
-
         trajectories.append(TrajectoryWithRew(acts=actions[previous_done:current_done],
-                                              obs=observations[previous_done + observation_shift:current_done + observation_shift + 1],
+                                              obs=observations[
+                                                  previous_done + observation_shift:current_done + observation_shift + 1],
                                               rews=rewards[previous_done:current_done],
-                                              infos=np.empty((current_done-previous_done,)),
+                                              infos=np.empty((current_done - previous_done,)),
                                               terminal=True))
         observation_shift += 1
 
@@ -39,7 +41,6 @@ def make_trajectories(trajectories_data: np.ndarray):
 
 
 def init_as_multiagent(imitation_policy: BasePolicy, rllib_policy):
-
     rllib_weights = rllib_policy.get_weights()
     imitation_weights = imitation_policy.state_dict()
 
@@ -72,7 +73,6 @@ REWARD_NET_WRAPPER_REGISTRY = {
     "AddSTDRewardWrapper": AddSTDRewardWrapper
 }
 
-
 REWARD_NET_REGISTRY: Dict[str, Type[RewardNet]] = {
     "BasicRewardNet": BasicRewardNet,
     "CnnRewardNet": CnnRewardNet,
@@ -104,7 +104,6 @@ def get_cls_kwargs(obj, cls_name):
 
 
 def create_reward_net(reward_net_settings, observation_space, action_space):
-
     reward_net_cls_name = get_cls_name(reward_net_settings) if reward_net_settings else "BasicRewardNet"
     reward_net_kwargs = get_cls_kwargs(reward_net_settings, reward_net_cls_name)
 
@@ -124,7 +123,6 @@ def create_reward_net(reward_net_settings, observation_space, action_space):
 
 
 def create_wrapped_reward_net(reward_net_settings, observation_space, action_space):
-
     if reward_net_settings is None:
         return create_reward_net("BasicRewardNet", observation_space, action_space)
 
@@ -166,7 +164,6 @@ def get_inner_algo_class_from_settings(settings):
 
 
 def create_imitation_models_from_settings(settings, env, optuna_settings):
-
     if isinstance(settings["save"]["human_model"], str):
         inner_algo = create_inner_algo_from_settings(env, optuna_settings)
         reward_net = create_wrapped_reward_net(settings["imitation"].get("reward_net", None),
@@ -179,3 +176,10 @@ def create_imitation_models_from_settings(settings, env, optuna_settings):
         trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']]
         inner_algo, reward_net = trainer.load(checkpoint_path, 'cpu', inner_algo_cls)
         return inner_algo, reward_net
+
+
+def find_imitation_checkpoint(settings):
+    imitation_algo = settings["imitation"]["algo"]["name"]
+    imitation_inner_algo = settings["imitation"].get("inner_algo", {}).get("name", "none")
+    return find_latest_dir(pathlib.Path(get_save_dir(settings['save']['human_model'])),
+                           lambda obj: obj.is_dir() and obj.name.startswith(f'{imitation_algo}-{imitation_inner_algo}'))

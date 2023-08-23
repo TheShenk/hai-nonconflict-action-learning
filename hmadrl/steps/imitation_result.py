@@ -1,5 +1,4 @@
 import argparse
-import pathlib
 
 import numpy as np
 from marllib import marl
@@ -7,7 +6,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from hmadrl.imitation_registry import IMITATION_REGISTRY
-from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings
+from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings, find_imitation_checkpoint
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env, find_latest_dir
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, import_user_code, get_save_dir
@@ -37,7 +36,7 @@ rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 rollout_env.render_mode = "human"
 
-checkpoint_path = find_latest_dir(pathlib.Path(get_save_dir(settings["save"]["human_model"])))
+checkpoint_path = find_imitation_checkpoint(settings)
 inner_algo_cls = get_inner_algo_class_from_settings(settings["imitation"])
 assert inner_algo_cls is not None, "Specified inner_algo is not supported"
 

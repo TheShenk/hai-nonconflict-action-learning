@@ -50,7 +50,10 @@ def run(settings):
         if use_multiagent_init:
             init_as_multiagent(inner_algo.policy, human_policy)
 
-        path = f"{get_save_dir(settings['save']['human_model'])}/{optuna_settings['algo']['name']}-{int(time())}-{trial.number}"
+        imitation_algo = settings["imitation"]["algo"]["name"]
+        imitation_inner_algo = settings["imitation"].get("inner_algo", {}).get("name", "none")
+        path = (f"{get_save_dir(settings['save']['human_model'])}/"
+                f"{imitation_algo}-{imitation_inner_algo}-{int(time())}-{trial.number}")
 
         trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo,
                                                                       reward_net,

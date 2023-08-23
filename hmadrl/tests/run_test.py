@@ -47,7 +47,7 @@ def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo, discr
             "human_agent": "red_0"
         },
         "imitation": {
-            "timesteps": 2048 if imitation_inner_algo not in {"ddpg", "td3", "sac", "tqc"} else 5,
+            "timesteps": 2048 if imitation_inner_algo not in {"ddpg", "td3", "sac", "tqc"} or imitation_algo != "bc" else 5,
             "algo": {
                 "name": imitation_algo,
                 "args": {} if imitation_algo in {"bc", "density"} else {
@@ -105,7 +105,7 @@ def test_step2(algorithm):
 @pytest.mark.parametrize("multiagent_algorithm,imitation_algorithm,inner_algorithm", ALL_STEPS_ALGORITHMS)
 def test_step3(multiagent_algorithm, imitation_algorithm, inner_algorithm):
     settings = create_settings(multiagent_algorithm, imitation_algorithm, inner_algorithm,
-                               discrete=(inner_algorithm in {"dqn", "qr-dqn"}))
+                               discrete=(multiagent_algorithm == 'coma' or inner_algorithm in {"dqn", "qr-dqn"}))
     try:
         run_step3(settings)
     except Exception as e:

@@ -9,6 +9,7 @@ from ray.rllib.policy.policy import PolicySpec
 
 from hmadrl.custom_policy import ImitationPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
+from hmadrl.imitation_utils import find_imitation_checkpoint
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_config, find_latest_dir, make_env
 from hmadrl.settings_utils import load_settings, import_user_code, get_save_settings, get_save_dir
 
@@ -30,8 +31,7 @@ def run(settings):
     with open(params_path, 'r') as params_file:
         multiagent_params = json.load(params_file)
 
-    experiment_path = find_latest_dir(pathlib.Path(get_save_dir(settings['save']['human_model'])),
-                                      lambda obj: obj.is_dir() and obj.name.startswith(settings["imitation"]["algo"]["name"]))
+    experiment_path = find_imitation_checkpoint(settings)
     humanoid_model_path = str(experiment_path)
 
     inner_algo_cls = RL_REGISTRY[settings['imitation']['inner_algo']['name']]
