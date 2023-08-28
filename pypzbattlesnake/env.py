@@ -21,8 +21,8 @@ class Action(enum.IntEnum):
 
 
 SHIFT_BY_ACTION = {
-    Action.UP: [0, 1],
-    Action.DOWN: [0, -1],
+    Action.UP: [0, -1],
+    Action.DOWN: [0, 1],
     Action.LEFT: [-1, 0],
     Action.RIGHT: [1, 0],
     Action.NONE: [0, 0]
@@ -39,12 +39,14 @@ class Snake:
 
     _color = FOOD_COLOR
 
-    def __init__(self, init_pos):
+    def __init__(self, init_pos, team):
+
+        self.body: list[tuple[int, int]] = [init_pos]
+        self.team = team
 
         Snake._color += 1
         self.color = Snake._color
         self.action = Action.NONE
-        self.body: list[tuple[int, int]] = [init_pos]
         self.health = 100
 
     def step(self, action):
@@ -54,7 +56,7 @@ class Snake:
 
         self.health -= 1
 
-        shift = SHIFT_BY_ACTION[action]
+        shift = SHIFT_BY_ACTION[self.action]
 
         head_block = self.body[-1]
         next_block = (head_block[0] + shift[0], head_block[1] + shift[1])
@@ -70,10 +72,13 @@ class Snake:
 
 class BattleSnake(pettingzoo.ParallelEnv):
 
-    def __init__(self, snakes_count, size: tuple[int, int] = (15, 15), food_count: int = 5, food_reward=0.1):
+    def __init__(self, teams_count, team_snakes_count, size: tuple[int, int] = (15, 15), food_count: int = 5, food_reward=0.1):
 
         super().__init__()
-        self.snakes_count = snakes_count
+        self.teams_count = teams_count
+        self.team_snakes_count = team_snakes_count
+        self.snakes_count = teams_count * team_snakes_count
+
         self.size = size
         self.food_count = food_count
         self.food_reward = food_reward
@@ -85,7 +90,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         self.rng = np.random.default_rng()
 
-        self.possible_agents = [f"snake_{i}" for i in range(self.snakes_count)]
+        self.teams = [[f"snake_{team_id}_{snake_id}" for snake_id in range(self.team_snakes_count)]
+                      for team_id in range(self.teams_count)]
+        self.possible_agents = sum(self.teams, [])
+
         self.action_spaces = {agent: Action for agent in self.possible_agents}
 
         self.renderer = None
@@ -103,8 +111,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         Snake._color = FOOD_COLOR
         self.snakes = {}
-        for agent in self.agents:
-            self.snakes[agent] = Snake(self.random_empty_position())
+
+        for idx, team in enumerate(self.teams):
+            for agent in team:
+                self.snakes[agent] = Snake(self.random_empty_position(), team=idx)
 
         self.food = {self.random_empty_position() for _ in range(self.food_count)}
         self.reward = {agent: 0.0 for agent in self.agents}
@@ -124,20 +134,33 @@ class BattleSnake(pettingzoo.ParallelEnv):
         for agent in self.agents:
             self.snakes[agent].step(action[agent])
 
+        self.check_health()
         self.check_border_collisions()
         self.check_food_collisions()
         self.check_self_collisions()
         self.check_head_head_collisions()
         self.check_another_collisions()
 
+        one_team_left = self.check_one_team_left()
+
         observation = Observation()
         observation.field = self.as_array()
         observation = {agent: observation for agent in action}
-        terminated = {agent: agent in self.eliminated_agents for agent in action}
+        if one_team_left:
+            terminated = {agent: True for agent in action}
+        else:
+            terminated = {agent: agent in self.eliminated_agents for agent in action}
         truncated = {agent: False for agent in action}
         info = {agent: {} for agent in action}
 
         return observation, self.reward, terminated, truncated, info, {}
+
+    def check_health(self):
+        eliminate_agents = []
+        for agent in self.agents:
+            if self.snakes[agent].health <= 0:
+                eliminate_agents.append(agent)
+        self.eliminate(eliminate_agents)
 
     def check_border_collisions(self):
         eliminate_agents = []
@@ -233,3 +256,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
         return {"colors_count": self.snakes_count + BASE_COLORS_COUNT,
                 "field_x": self.size[0],
                 "field_y": self.size[1]}
+
+    def check_one_team_left(self):
+        teams_left = set()
+        for name, snake in self.snakes.items():
+            teams_left.add(snake.team)
+
+        return len(teams_left) == 1

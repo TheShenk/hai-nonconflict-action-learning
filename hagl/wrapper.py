@@ -135,8 +135,8 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
 
         return observation, reward, terminated, truncated, info
 
-    def render(self, mode: str = "human") -> RenderFrame | list[RenderFrame] | None:
-        return self.env.render(mode)
+    def render(self) -> RenderFrame | list[RenderFrame] | None:
+        return self.env.render()
 
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):

@@ -9,9 +9,11 @@ class PyGameFPSWrapper(BaseWrapper):
         self.clock = pygame.time.Clock()
         self.fps = fps
 
-    def render(self, mode='human'):
-        super().render(mode)
-        if mode == 'human':
+        self.metadata = {"is_parallelizable": True}
+
+    def render(self):
+        super().render()
+        if pygame.get_init():
             self.clock.tick(self.fps)
 
 

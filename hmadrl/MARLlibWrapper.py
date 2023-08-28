@@ -71,4 +71,3 @@ class CoopMARLlibWrapper(MARLlibWrapper):
         coop_reward = sum([reward[agent] for agent in observation])
         reward = {agent: coop_reward for agent in observation}
         return observation, reward, done, info
-
