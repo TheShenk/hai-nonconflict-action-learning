@@ -7,6 +7,8 @@ import supersuit
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.rllib.utils.typing import MultiAgentDict
 
+from hagl.convert_space import convert_space
+
 
 class MARLlibWrapper(MultiAgentEnv):
 
@@ -18,25 +20,27 @@ class MARLlibWrapper(MultiAgentEnv):
         # pad_action_space_v0 will auto mask the padding actions
         env = supersuit.pad_observations_v0(env)
         env = supersuit.pad_action_space_v0(env)
+        env = supersuit.black_death_v3(env)
 
         self.env = env
         self.agents = env.possible_agents
         self.num_agents = len(self.agents)
-        self.observation_space = gym.spaces.Dict({"obs": self.env.observation_space(self.agents[0])})
-        self.action_space = self.env.action_space(self.agents[0])
+        self.observation_space = gym.spaces.Dict({"obs": convert_space(self.env.observation_space(self.agents[0]))})
+        self.action_space = convert_space(self.env.action_space(self.agents[0]))
 
         self.max_episode_len = max_episode_len
         self.policy_mapping_info = policy_mapping_info
 
     def reset(self) -> MultiAgentDict:
-        observation = self.env.reset()
+        observation, info = self.env.reset()
         observation = {agent: {"obs": observation[agent]} for agent in self.agents}
         return observation
 
     def step(self, action: MultiAgentDict) -> Tuple[
         MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
-        observation, reward, done, info = self.env.step(action)
+        observation, reward, terminated, truncated, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
+        done = {agent: terminated[agent] or truncated[agent] for agent in action.keys()}
         total_done = np.all(list(done.values()))
         done["__all__"] = total_done
         return observation, reward, done, info

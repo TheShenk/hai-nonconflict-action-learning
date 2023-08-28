@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import SupportsFloat, Any, Callable
 
 import gymnasium
@@ -91,6 +92,9 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
         self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
         self.template_values.update(template_values)
 
+        if self.env.init_template:
+            self.template_values.update(self.env.init_template())
+
     def __getattr__(self, name: str) -> Any:
         """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
         if name == "_np_random":
@@ -113,36 +117,38 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
         gymnasium_action = gymnasium.spaces.unflatten(gymnasium_action_space, action)
         return hagl.construct(hagl_action_space, gymnasium_action, self.template_values)
 
-    def reset(self):
+    def reset(self, seed: int | None = None, options: dict | None = None):
 
-        hagl_observation, template_values = self.env.reset()
+        hagl_observation, info, template_values = self.env.reset(seed, options)
         self.template_values.update(template_values)
         observation = for_each_agent(hagl_observation, self._process_observation)
 
-        return observation
+        return observation, info
 
     def step(
             self, action: WrapperActType
-    ) -> tuple[WrapperObsType, SupportsFloat, bool, dict[str, Any]]:
+    ) -> tuple[WrapperObsType, SupportsFloat, bool, bool, dict[str, Any]]:
 
         hagl_action = for_each_agent(action, self._process_action)
-        hagl_observation, reward, terminated, info, template_values = self.env.step(hagl_action)
+        hagl_observation, reward, terminated, truncated, info, template_values = self.env.step(hagl_action)
         observation = for_each_agent(hagl_observation, self._process_observation)
 
-        return observation, reward, terminated, info
+        return observation, reward, terminated, truncated, info
 
     def render(self, mode: str = "human") -> RenderFrame | list[RenderFrame] | None:
         return self.env.render(mode)
 
+    @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         hagl_action_space = self.env.action_space(agent)
         gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
-        return convert_space(gymnasium.spaces.flatten_space(gymnasium_action_space))
+        return gymnasium.spaces.flatten_space(gymnasium_action_space)
 
+    @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         hagl_observation_space = self.env.observation_space(agent)
         gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
-        return convert_space(gymnasium.spaces.flatten_space(gymnasium_observation_space))
+        return gymnasium.spaces.flatten_space(gymnasium_observation_space)
 
 
 class HAGLAECWrapper(pettingzoo.AECEnv):

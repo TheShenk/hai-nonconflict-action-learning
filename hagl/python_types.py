@@ -38,3 +38,21 @@ class Bool(HAGLType):
     @staticmethod
     def deconstruct(hagl_value, template_values):
         return int(hagl_value)
+
+
+class Integer(HAGLType):
+
+    def __init__(self, max_n):
+        self.max_n = max_n
+
+    def gym_type(self, template_values):
+        max_n = get_template(self.max_n, template_values)
+        return gymnasium.spaces.Discrete(max_n)
+
+    @staticmethod
+    def construct(gym_value, template_values):
+        return int(gym_value)
+
+    @staticmethod
+    def deconstruct(hagl_value, template_values):
+        return int(hagl_value)

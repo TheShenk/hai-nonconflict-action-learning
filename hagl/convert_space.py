@@ -37,6 +37,4 @@ def convert_space(space: gymnasium.Space) -> gym.Space:
             charset=space._char_str,
         )
     else:
-        raise NotImplementedError(
-            f"Cannot convert space of type {space}. Please upgrade your code to gymnasium."
-        )
+        return space

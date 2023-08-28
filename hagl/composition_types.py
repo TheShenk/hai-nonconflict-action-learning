@@ -20,13 +20,14 @@ class Array(HAGLType):
         assert t_elements_count != 0, "Array must have at least 1 element"
 
         inner_gym_type = compile_type(t_inner_type, template_values)
-        return gymnasium.spaces.Tuple([inner_gym_type,] * t_elements_count)
+        return gymnasium.spaces.Tuple([inner_gym_type, ] * t_elements_count)
 
     def construct(self, gym_value: gym.spaces.Tuple, template_values):
         t_inner_type = get_template(self.inner_type, template_values)
         t_elements_count = get_template(self.elements_count, template_values)
 
-        assert t_elements_count == len(gym_value), "Got Gymnasium array with number of elements different from the specified one"
+        assert t_elements_count == len(gym_value), ("Got Gymnasium array with number of elements different from the "
+                                                    "specified one")
 
         value = [hagl.construct(t_inner_type, t_value, template_values) for t_value in gym_value]
         return value
@@ -35,10 +36,12 @@ class Array(HAGLType):
         t_inner_type = get_template(self.inner_type, template_values)
         t_elements_count = get_template(self.elements_count, template_values)
 
-        assert t_elements_count == len(hagl_value), "Got HAGL array with number of elements different from the specified one"
+        assert t_elements_count == len(hagl_value), ("Got HAGL array with number of elements different from the "
+                                                     "specified one")
 
         value = map(lambda v: hagl.deconstruct(t_inner_type, v, template_values), hagl_value)
         return tuple(value)
+
 
 class EnableIf(HAGLType):
 
