@@ -58,7 +58,9 @@ class Snake:
 
 class BattleSnake(pettingzoo.ParallelEnv):
 
-    def __init__(self, teams_count, team_snakes_count, size: tuple[int, int] = (15, 15), food_count: int = 5, food_reward=0.1):
+    def __init__(self, teams_count,
+                 team_snakes_count, size: tuple[int, int] = (15, 15),
+                 min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1):
 
         super().__init__()
         self.teams_count = teams_count
@@ -66,8 +68,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.snakes_count = teams_count * team_snakes_count
 
         self.size = size
-        self.food_count = food_count
+        self.min_food_count = min_food_count
+        self.food_spawn_interval = food_spawn_interval
         self.food_reward = food_reward
+        self.food_spawn_timer = 0
 
         self.reward = {}
         self.food: set[tuple[int, int]] = set()
@@ -92,6 +96,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
             np.random.seed(seed)
 
         self.rng = np.random.default_rng()
+        self.renderer = None
 
         self.agents = self.possible_agents.copy()
 
@@ -102,7 +107,9 @@ class BattleSnake(pettingzoo.ParallelEnv):
             for agent in team:
                 self.snakes[agent] = Snake(self.random_empty_position(), team=idx)
 
-        self.food = {self.random_empty_position() for _ in range(self.food_count)}
+        self.food = {self.random_empty_position() for _ in range(self.min_food_count)}
+        self.food_spawn_timer = 0
+
         self.reward = {agent: 0.0 for agent in self.agents}
         self.eliminated_agents = set()
 
@@ -127,12 +134,14 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.check_head_head_collisions()
         self.check_another_collisions()
 
-        one_team_left = self.check_one_team_left()
+        self.spawn_food()
+
+        end_game = self.check_end_game()
 
         observation = Observation()
         observation.field = self.as_array()
         observation = {agent: observation for agent in action}
-        if one_team_left:
+        if end_game:
             terminated = {agent: True for agent in action}
         else:
             terminated = {agent: agent in self.eliminated_agents for agent in action}
@@ -163,7 +172,6 @@ class BattleSnake(pettingzoo.ParallelEnv):
             if snake_head in self.food:
                 snake.heal()
                 self.food.remove(snake_head)
-                self.food.add(self.random_empty_position())
                 self.reward[agent] = self.food_reward
             else:
                 snake.body.pop(0)
@@ -243,9 +251,19 @@ class BattleSnake(pettingzoo.ParallelEnv):
                 "field_x": self.size[0],
                 "field_y": self.size[1]}
 
-    def check_one_team_left(self):
+    def check_end_game(self):
         teams_left = set()
         for name, snake in self.snakes.items():
             teams_left.add(snake.team)
 
-        return len(teams_left) == 1
+        return len(teams_left) <= 1
+
+    def spawn_food(self):
+
+        while len(self.food) < self.min_food_count:
+            self.food.add(self.random_empty_position())
+
+        self.food_spawn_timer += 1
+        if self.food_spawn_timer >= self.food_spawn_interval:
+            self.food.add(self.random_empty_position())
+            self.food_spawn_timer = 0

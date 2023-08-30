@@ -26,6 +26,7 @@ def _unflatten_discrete(space: Discrete, x: NDArray[np.int64]) -> np.int64:
 def create_battlesnake(env_config):
     env = BattleSnake(2, 2)
     env = HAGLParallelWrapper(env)
+    env = TimeLimit(env, 300)
     env = PyGameFPSWrapper(parallel_to_aec(env), fps=2)
     env = aec_to_parallel(env)
     return env
