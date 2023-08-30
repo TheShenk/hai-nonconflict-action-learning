@@ -4,11 +4,23 @@ import functools
 from typing import SupportsFloat, Any, Callable
 
 import gymnasium
+import numpy as np
+from gymnasium.spaces import Discrete
+from gymnasium.spaces import unflatten
 from gymnasium.core import WrapperActType, WrapperObsType, RenderFrame, ObsType
 import pettingzoo
+from numpy.typing import NDArray
 
 import hagl
 from hagl.convert_space import convert_space
+
+
+@unflatten.register(Discrete)
+def _unflatten_discrete(space: Discrete, x: NDArray[np.int64]) -> np.int64:
+    nonzero = np.nonzero(x)
+    if len(nonzero[0]) == 0:
+        return space.start
+    return space.start + nonzero[0][0]
 
 
 class HAGLWrapper(gymnasium.Env):

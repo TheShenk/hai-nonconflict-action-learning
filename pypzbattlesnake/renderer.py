@@ -1,6 +1,10 @@
+import pathlib
+
 import numpy as np
 import pygame
 import colorsys
+
+from pypzbattlesnake.common import Action, ACTION_BY_SHIFT
 
 BACKGROUND_COLOR = (255, 255, 255)
 CELL_COLOR = (220, 217, 205)
@@ -12,10 +16,22 @@ FOOD_RADIUS = 10
 RECT_PADDING = 5
 GRID_PADDING = 10
 
+ROTATE_BY_DIRECTION = {
+    Action.RIGHT: lambda x: x,
+    Action.LEFT: lambda x: pygame.transform.flip(x, True, False),
+    Action.UP: lambda x: pygame.transform.rotate(x, 90),
+    Action.DOWN: lambda x: pygame.transform.rotate(x, -90),
+    Action.NONE: lambda x: x
+}
+
 
 def random_color():
     h = np.random.default_rng().random()
-    return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.5, 1.0)))
+    return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.3, 1.0)))
+
+
+def get_shift(cell_a, cell_b):
+    return cell_a[0] - cell_b[0], cell_a[1] - cell_b[1]
 
 
 class BattleSnakeRenderer:
@@ -24,6 +40,8 @@ class BattleSnakeRenderer:
         self.env = env
         pygame.init()
         pygame.key.set_repeat(1, 1)
+
+        file_path = pathlib.Path(__file__).parent.resolve()
 
         self.screen = pygame.display.set_mode((600, 600))
 
@@ -39,6 +57,18 @@ class BattleSnakeRenderer:
                 pygame.draw.rect(self.screen, CELL_COLOR, self.field[-1][-1])
                 rect_y += RECT_SIZE + RECT_PADDING
             rect_x += RECT_SIZE + RECT_PADDING
+
+        self.head_img = pygame.image.load(file_path / 'resources' / 'head.svg').convert_alpha()
+        self.head_img = pygame.transform.scale(self.head_img, (RECT_SIZE, RECT_SIZE))
+        for _, snake in self.env.snakes.items():
+            snake.render_head = self.head_img.copy()
+            snake.render_head.fill(self.snake_colors[snake.color], special_flags=pygame.BLEND_RGB_MAX)
+
+        self.tail_img = pygame.image.load(file_path / 'resources' / 'tail.svg').convert_alpha()
+        self.tail_img = pygame.transform.scale(self.tail_img, (RECT_SIZE, RECT_SIZE))
+        for _, snake in self.env.snakes.items():
+            snake.render_tail = self.tail_img.copy()
+            snake.render_tail.fill(self.snake_colors[snake.color], special_flags=pygame.BLEND_RGB_MAX)
 
         self.render()
 
@@ -57,23 +87,24 @@ class BattleSnakeRenderer:
 
     def draw_snake(self, snake):
 
-        self.draw_head(snake)
+        self.draw_head(snake, snake.action)
         if len(snake.body) != 1:
-            self.draw_tail(snake)
+            shift = get_shift(snake.body[0], snake.body[1])
+            direction = ACTION_BY_SHIFT[shift]
+            self.draw_tail(snake, direction)
             for el in snake.body[1:-1]:
                 el_rect = self.field[el[0]][el[1]]
                 pygame.draw.rect(self.screen, self.snake_colors[snake.color], el_rect)
 
-    def draw_head(self, snake):
+    def draw_head(self, snake, direction):
         head_rect = self.field[snake.head()[0]][snake.head()[1]]
-        pygame.draw.rect(self.screen, self.snake_colors[snake.color], head_rect)
-        pass
+        head = ROTATE_BY_DIRECTION[direction](snake.render_head)
+        self.screen.blit(head, head_rect.topleft)
 
-    def draw_tail(self, snake):
-        tail = snake.body[0]
-        tail_rect = self.field[tail[0]][tail[1]]
-        pygame.draw.rect(self.screen, self.snake_colors[snake.color], tail_rect)
-        pass
+    def draw_tail(self, snake, direction):
+        tail_rect = self.field[snake.tail()[0]][snake.tail()[1]]
+        tail = ROTATE_BY_DIRECTION[direction](snake.render_tail)
+        self.screen.blit(tail, tail_rect.topleft)
 
     def draw_field(self):
         for row in self.field:

@@ -1,32 +1,15 @@
-import enum
 import numpy as np
 import pettingzoo
 from pettingzoo.utils.env import AgentID
 
 from hagl import T
 from hagl.python_types import Integer
+from pypzbattlesnake.common import Action, SHIFT_BY_ACTION
 from pypzbattlesnake.renderer import BattleSnakeRenderer
 
 
 class Observation:
     field = [[Integer(T("colors_count")), T("field_x")], T("field_y")]
-
-
-class Action(enum.IntEnum):
-    UP = enum.auto()
-    DOWN = enum.auto()
-    LEFT = enum.auto()
-    RIGHT = enum.auto()
-    NONE = enum.auto()
-
-
-SHIFT_BY_ACTION = {
-    Action.UP: [0, -1],
-    Action.DOWN: [0, 1],
-    Action.LEFT: [-1, 0],
-    Action.RIGHT: [1, 0],
-    Action.NONE: [0, 0]
-}
 
 
 EMPTY_COLOR = 0
@@ -68,6 +51,9 @@ class Snake:
 
     def head(self):
         return self.body[-1]
+
+    def tail(self):
+        return self.body[0]
 
 
 class BattleSnake(pettingzoo.ParallelEnv):

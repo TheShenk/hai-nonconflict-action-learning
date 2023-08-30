@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Tuple
 
 import gym
@@ -10,6 +12,26 @@ from ray.rllib.utils.typing import MultiAgentDict
 from hagl.convert_space import convert_space
 
 
+class TimeLimit(pettingzoo.utils.BaseParallelWrapper):
+
+    def __init__(self, env, max_episode_steps):
+        super().__init__(env)
+        self.max_episode_steps = max_episode_steps
+        self.elapsed_steps = None
+
+    def reset(self, seed: int | None = None, options: dict | None = None):
+        res = super().reset(seed, options)
+        self.elapsed_steps = 0
+        return res
+
+    def step(self, actions):
+        observation, reward, terminated, truncated, info = super().step(actions)
+        self.elapsed_steps += 1
+        if self.elapsed_steps > self.max_episode_steps:
+            truncated = {agent: True for agent in truncated}
+        return observation, reward, terminated, truncated, info
+
+
 class MARLlibWrapper(MultiAgentEnv):
 
     def __init__(self, env: pettingzoo.ParallelEnv, max_episode_len, policy_mapping_info):
@@ -18,6 +40,7 @@ class MARLlibWrapper(MultiAgentEnv):
 
         # keep obs and action dim same across agents
         # pad_action_space_v0 will auto mask the padding actions
+        env = TimeLimit(env, max_episode_len)
         env = supersuit.pad_observations_v0(env)
         env = supersuit.pad_action_space_v0(env)
         env = supersuit.black_death_v3(env)
@@ -36,8 +59,8 @@ class MARLlibWrapper(MultiAgentEnv):
         observation = {agent: {"obs": observation[agent]} for agent in self.agents}
         return observation
 
-    def step(self, action: MultiAgentDict) -> Tuple[
-        MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+    def step(self, action: MultiAgentDict) -> (
+            Tuple)[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         observation, reward, terminated, truncated, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
         done = {agent: terminated[agent] or truncated[agent] for agent in action.keys()}
