@@ -6,9 +6,9 @@ from gymnasium.spaces.utils import unflatten
 
 import pygame
 from pettingzoo.utils import parallel_to_aec, aec_to_parallel
+import supersuit
 
 from hagl import HAGLParallelWrapper
-from hmadrl.MARLlibWrapper import TimeLimit
 from hmadrl.pygame_utils import PyGamePolicy, PyGameFPSWrapper
 from hmadrl.marllib_utils import register_env
 
@@ -25,8 +25,7 @@ def _unflatten_discrete(space: Discrete, x: NDArray[np.int64]) -> np.int64:
 
 def create_battlesnake(env_config):
     env = BattleSnake(2, 2)
-    env = HAGLParallelWrapper(env)
-    env = TimeLimit(env, 300)
+    env = supersuit.reshape_v0(env, (15, 15, 6))
     env = PyGameFPSWrapper(parallel_to_aec(env), fps=2)
     env = aec_to_parallel(env)
     return env

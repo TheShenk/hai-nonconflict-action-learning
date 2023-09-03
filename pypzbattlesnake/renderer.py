@@ -4,7 +4,7 @@ import numpy as np
 import pygame
 import colorsys
 
-from pypzbattlesnake.common import Action, ACTION_BY_SHIFT
+from .common import Action, ACTION_BY_SHIFT
 
 BACKGROUND_COLOR = (255, 255, 255)
 CELL_COLOR = (220, 217, 205)
