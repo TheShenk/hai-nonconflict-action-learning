@@ -59,13 +59,15 @@ class BattleSnake(pettingzoo.ParallelEnv):
     def __init__(self, teams_count,
                  team_snakes_count, size: Tuple[int, int] = (15, 15),
                  min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1,
-                 n_prev_obs=2):
+                 n_prev_obs=4, render_mode="human"):
 
         super().__init__()
         self.teams_count = teams_count
         self.team_snakes_count = team_snakes_count
         self.snakes_count = teams_count * team_snakes_count
         self.colors_count = self.snakes_count + BASE_COLORS_COUNT
+
+        self.render_mode = render_mode
 
         self.size = size
         self.n_prev_obs = n_prev_obs
@@ -258,9 +260,9 @@ class BattleSnake(pettingzoo.ParallelEnv):
     def render(self) -> None:
 
         if self.renderer is None:
-            self.renderer = BattleSnakeRenderer(self)
+            self.renderer = BattleSnakeRenderer(self, self.render_mode == "human")
 
-        self.renderer.render()
+        return self.renderer.render()
 
     def close(self):
         if self.renderer is not None:

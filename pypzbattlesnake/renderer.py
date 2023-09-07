@@ -36,10 +36,13 @@ def get_shift(cell_a, cell_b):
 
 class BattleSnakeRenderer:
 
-    def __init__(self, env):
+    def __init__(self, env, human_mode=True):
         self.env = env
-        pygame.init()
-        pygame.key.set_repeat(1, 1)
+        self.human_mode = human_mode
+
+        if self.human_mode:
+            pygame.init()
+            pygame.key.set_repeat(1, 1)
 
         file_path = pathlib.Path(__file__).parent.resolve()
 
@@ -70,8 +73,6 @@ class BattleSnakeRenderer:
             snake.render_tail = self.tail_img.copy()
             snake.render_tail.fill(self.snake_colors[snake.color], special_flags=pygame.BLEND_RGB_MAX)
 
-        self.render()
-
     def render(self):
         self.screen.fill(BACKGROUND_COLOR)
 
@@ -80,10 +81,13 @@ class BattleSnakeRenderer:
         for agent, snake in self.env.snakes.items():
             self.draw_snake(snake)
 
-        pygame.display.flip()
+        if self.human_mode:
+            pygame.display.flip()
+        else:
+            return pygame.surfarray.array3d(self.screen)
 
     def close(self):
-        pygame.exit()
+        pygame.quit()
 
     def draw_snake(self, snake):
 
