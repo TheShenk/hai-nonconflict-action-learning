@@ -128,7 +128,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def step(self, action: Dict[str, np.array]):
 
-        self.reward = {agent: 0.0 for agent in self.agents}
+        self.reward = {agent: 0.0 for agent in action}
         action = {agent: Action(np.argmax(act) + 1) for agent, act in action.items()}
 
         for agent in self.agents:

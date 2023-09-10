@@ -46,7 +46,9 @@ class BattleSnakeRenderer:
 
         file_path = pathlib.Path(__file__).parent.resolve()
 
-        self.screen = pygame.display.set_mode((600, 600))
+        size_x = self.env.size[0] * (RECT_SIZE + RECT_PADDING) + GRID_PADDING * 2 - RECT_PADDING
+        size_y = self.env.size[1] * (RECT_SIZE + RECT_PADDING) + GRID_PADDING * 2 - RECT_PADDING
+        self.screen = pygame.display.set_mode((size_x, size_y))
 
         self.field: list[list[pygame.Rect]] = []
         self.snake_colors = {snake.color: random_color() for _, snake in self.env.snakes.items()}

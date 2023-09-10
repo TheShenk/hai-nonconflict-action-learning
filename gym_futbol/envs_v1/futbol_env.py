@@ -1,10 +1,4 @@
-import gym
 import pygame
-from gym import error, spaces
-from gym.utils import seeding
-
-from agents.random_agent import RandomAgent
-from .player import Player
 from .ball import Ball
 from .team import Team
 
@@ -13,7 +7,6 @@ from gym import spaces
 import numpy as np
 import random
 import math
-from pymunk.vec2d import Vec2d
 import pymunk.matplotlib_util
 import pymunk
 import matplotlib.pyplot as plt
@@ -68,7 +61,7 @@ def inverse_physic_vector_by_x_axis(vector):
 class Futbol(gym.Env):
     def __init__(self, width=WIDTH, height=HEIGHT, player_radius=PLAYER_RADIUS, ball_radius=BALL_RADIUS,
                  total_time=TOTAL_TIME, debug=False,
-                 number_of_player=NUMBER_OF_PLAYER, team_B_model=RandomAgent,
+                 number_of_player=NUMBER_OF_PLAYER, team_B_model=None,
                  action_space_type="multi-discrete", random_position=False,
                  team_reward_coeff=10, ball_reward_coeff=10, goal_reward=1000, message_dims_number=0,
                  is_out_rule_enabled=True):
@@ -173,7 +166,8 @@ class Futbol(gym.Env):
 
         self.reset()
         self.observation, self.inverse_obs = self._get_observation()
-        self.team_B_model = team_B_model(self)
+
+        self.team_B_model = team_B_model(self) if team_B_model else None
 
     def _position_to_initial(self):
 

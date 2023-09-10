@@ -8,7 +8,6 @@ class PettingZooToCrowdPlay:
 
     def __init__(self, env):
         self.env = env
-        self.list_of_agents = self.env.possible_agents
 
         self.action_space = {agent: self.env.action_space(agent) for agent in self.list_of_agents}
         self.observation_space = {agent: self.env.observation_space(agent) for agent in self.list_of_agents}
@@ -41,3 +40,7 @@ class PettingZooToCrowdPlay:
             return 0
 
         return get_noop_for_space(self.action_space[agent])
+
+    @property
+    def list_of_agents(self):
+        return self.env.possible_agents

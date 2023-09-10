@@ -148,6 +148,7 @@ def load_trainer_from_checkpoint(checkpoint_path, custom_model=None):
     if custom_model is not None:
         params["model"]["custom_model"] = "current_model"
 
+    params.pop("env")
     trainer_cls = get_trainer_class(params["model"]["custom_model_config"]["algorithm"], params)
     trainer = trainer_cls(params)
     trainer.restore(checkpoint_path)

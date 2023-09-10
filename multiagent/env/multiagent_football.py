@@ -6,6 +6,7 @@ import gym.spaces
 import numpy as np
 import pygame
 import pymunk
+import pymunk.pygame_util
 from pettingzoo import AECEnv, ParallelEnv
 from pettingzoo.utils import agent_selector
 
@@ -15,12 +16,13 @@ from multiagent.env.football import TwoSideFootball
 
 class MultiAgentFootball(ParallelEnv):
 
-    def __init__(self, env: TwoSideFootball):
+    def __init__(self, env: TwoSideFootball, render_mode="human"):
         self.env = env
         self.red_agents = [f"red_{i}" for i in range(env.number_of_player)]
         self.blue_agents = [f"blue_{i}" for i in range(env.number_of_player)]
         self.possible_agents = self.red_agents + self.blue_agents
         self.agents = self.possible_agents
+        self.render_mode = render_mode
 
         self.surface = None
 
@@ -33,14 +35,14 @@ class MultiAgentFootball(ParallelEnv):
         self.combiner_function = NON_VEC_COMBINER if self.env.action_space_type[0] == "box" \
             else NON_VEC_DISCRETE_COMBINER
 
-        self.metadata = {"render.modes": ["human"]}
+        self.metadata = {"render.modes": ["human", "rgb_array"]}
 
     def reset(self):
         obs = self.env.reset()
         inverse_obs = self.env.inverse_obs
         observations = {agent: obs for agent in self.red_agents} | \
                        {agent: inverse_obs for agent in self.blue_agents}
-        return observations
+        return observations, {}
 
     def step(self, actions):
         red_action = [actions[agent] for agent in self.red_agents]
@@ -62,21 +64,24 @@ class MultiAgentFootball(ParallelEnv):
                        {agent: inverse_obs.copy() for agent in self.blue_agents}
         rewards = {agent: red_reward / 1000 for agent in self.red_agents} | \
                   {agent: blue_reward / 1000 for agent in self.blue_agents}
-        dones = {agent: done for agent in self.agents}
-        dones.update({"__all__": done})
+        terminated = {agent: done for agent in self.agents}
+        terminated.update({"__all__": done})
+        truncated = {agent: False for agent in self.agents}
         infos = {agent: {} for agent in self.agents}
 
-        return observations, rewards, dones, infos
+        return observations, rewards, terminated, truncated, infos
 
-    def render(self, mode="human"):
-        if not pygame.get_init():
+    def render(self):
+        if not self.surface:
             RES = WIDTH, HEIGHT = 600, 400
             FPS = 24
 
-            pygame.init()
-            pygame.key.set_repeat(1, 1)
+            if self.render_mode == "human":
+                pygame.init()
+                pygame.key.set_repeat(1, 1)
+                self.clock = pygame.time.Clock()
+
             self.surface = pygame.display.set_mode(RES)
-            self.clock = pygame.time.Clock()
 
             translation = (4, 2)
             scale_factor = min(WIDTH / (self.env.width + translation[0] * 2),
@@ -88,10 +93,12 @@ class MultiAgentFootball(ParallelEnv):
 
         self.surface.fill("black")
         self.env.space.debug_draw(self.draw_options)
-        pygame.display.flip()
-        self.clock.tick(self.fps)
 
-        return True
+        if self.render_mode == "human":
+            pygame.display.flip()
+            self.clock.tick(self.fps)
+        else:
+            return pygame.surfarray.array3d(self.surface)
 
     def close(self):
         pygame.quit()
