@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Tuple, Dict, Any
 
-import gym.spaces
+from gymnasium import spaces
 import numpy as np
 import pygame
 import pymunk
@@ -28,8 +28,8 @@ class MultiAgentFootball(ParallelEnv):
 
         self.observation_spaces = {agent: self.env.observation_space for agent in self.agents}
 
-        agent_action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[0] == 'box' \
-            else gym.spaces.Discrete(25)
+        agent_action_space = spaces.Box(low=-1.0, high=1.0, shape=(4,)) if self.env.action_space_type[0] == 'box' \
+            else spaces.Discrete(25)
         self.action_spaces = {agent: agent_action_space for agent in self.agents}
 
         self.combiner_function = NON_VEC_COMBINER if self.env.action_space_type[0] == "box" \
@@ -37,7 +37,7 @@ class MultiAgentFootball(ParallelEnv):
 
         self.metadata = {"render.modes": ["human", "rgb_array"]}
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         obs = self.env.reset()
         inverse_obs = self.env.inverse_obs
         observations = {agent: obs for agent in self.red_agents} | \
@@ -65,7 +65,6 @@ class MultiAgentFootball(ParallelEnv):
         rewards = {agent: red_reward / 1000 for agent in self.red_agents} | \
                   {agent: blue_reward / 1000 for agent in self.blue_agents}
         terminated = {agent: done for agent in self.agents}
-        terminated.update({"__all__": done})
         truncated = {agent: False for agent in self.agents}
         infos = {agent: {} for agent in self.agents}
 
@@ -116,7 +115,7 @@ class AECMultiAgentFootball(AECEnv):
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
-        self.action_spaces = {agent: gym.spaces.Box(low=-1.0, high=1.0, shape=(4,)) for agent in self.possible_agents}
+        self.action_spaces = {agent: spaces.Box(low=-1.0, high=1.0, shape=(4,)) for agent in self.possible_agents}
         self.observation_spaces = {
             agent: env.observation_space for agent in self.possible_agents
         }

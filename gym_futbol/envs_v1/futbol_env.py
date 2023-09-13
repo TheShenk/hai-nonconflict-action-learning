@@ -2,8 +2,8 @@ import pygame
 from .ball import Ball
 from .team import Team
 
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 import random
 import math

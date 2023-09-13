@@ -89,8 +89,11 @@ class MARLlibWrapper(MultiAgentEnv):
 class CoopMARLlibWrapper(MARLlibWrapper):
 
     def step(self, action: MultiAgentDict) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
-        observation, reward, done, info = self.env.step(action)
+        observation, reward, terminated, truncated, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
         coop_reward = sum([reward[agent] for agent in observation])
         reward = {agent: coop_reward for agent in observation}
+        done = {agent: terminated[agent] or truncated[agent] for agent in action.keys()}
+        total_done = np.all(list(done.values()))
+        done["__all__"] = total_done
         return observation, reward, done, info
