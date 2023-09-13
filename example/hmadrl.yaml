@@ -45,7 +45,7 @@ result:
 
 save:
   multiagent: example_multiagent
-  trajectory: example_human.npz
+  trajectory: example_human.hdf5
   human_model: example_humanoid
   retraining_model: example_retraining
 

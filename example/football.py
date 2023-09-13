@@ -54,7 +54,7 @@ def human_policy(key, obs):
     elif key == pygame.K_SPACE:
         hit_direction = [1, 0]
 
-    return np.append(move_direction, hit_direction)
+    return np.append(move_direction, hit_direction).astype(np.float32)
 
 
 policy = PyGamePolicy(human_policy)

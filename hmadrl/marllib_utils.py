@@ -185,15 +185,15 @@ def rollout(env, policy, episodes_count):
     for episode_index in range(episodes_count):
         print("Current episode:", episode_index)
         done = False
-        observation = env.reset()
+        observation, _ = env.reset()
         current_episode_reward = 0
         while not done:
             action = policy(observation)
-            observation, reward, done, info = env.step(action)
+            observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
             current_episode_reward += reward
-            env.render('human')
+            env.render()
         episode_reward.append(current_episode_reward)
-    env.close()
     return sum(episode_reward)/episodes_count
 
 
@@ -215,7 +215,7 @@ def register_env(environment_name: str,
 
 
 def make_env(environment_settings: dict):
-    marllib_env_config = environment_settings
+    marllib_env_config = environment_settings.copy()
 
     marllib_env_config["env"] = environment_settings["name"]
     marllib_env_config.pop("name")

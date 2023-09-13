@@ -64,8 +64,7 @@ class MARLlibWrapper(MultiAgentEnv):
         observation, reward, terminated, truncated, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
         done = {agent: terminated[agent] or truncated[agent] for agent in action.keys()}
-        total_done = np.all(list(done.values()))
-        done["__all__"] = total_done
+        done["__all__"] = np.all(list(done.values()))
         return observation, reward, done, info
 
     def close(self):

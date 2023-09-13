@@ -1,7 +1,8 @@
+import gymnasium.envs.registration
 from marllib import marl
+import minari
 import argparse
 
-from hmadrl.human_recorder import HumanRecorder
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, import_user_code
@@ -23,10 +24,13 @@ def run(settings):
     human_agent = settings['rollout']['human_agent']
     policy_mapping.pop(human_agent, None)
 
-    rollout_env = PreSettedAgentsEnv(HumanRecorder(env_instance, human_agent, settings['save']['trajectory']),
-                                     policy_mapping, human_agent)
+    rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
+    rollout_env.spec = gymnasium.envs.registration.EnvSpec(id=settings['env']['name'])
+    rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
+    rollout_env.save_to_disk(settings['save']['trajectory'])
+    rollout_env.close()
     print("Average:", average_reward)
 
 

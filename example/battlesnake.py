@@ -53,7 +53,7 @@ def human_policy(key, obs):
     elif key == pygame.K_RIGHT or key == pygame.K_d:
         action = [0, 0, 0, 1, 0]
 
-    return np.array(action)
+    return np.array(action, dtype=np.float32)
 
 
 policy = PyGamePolicy(human_policy)

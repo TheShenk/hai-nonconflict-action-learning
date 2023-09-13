@@ -1,6 +1,7 @@
-import gym
+import gymnasium
 import numpy as np
 import pettingzoo
+import shimmy
 import torch as th
 from ray.rllib import MultiAgentEnv
 
@@ -21,20 +22,20 @@ class RolloutInfo:
         return action
 
 
-class PreSettedAgentsEnv(gym.Env):
+class PreSettedAgentsEnv(gymnasium.Env):
 
     def step(self, action):
         total_action = {agent_id: self.presetted_policies[agent_id].predict(self.observation[agent_id])
                         for agent_id in self.presetted_policies}
 
         total_action[self.controlled_agent_id] = action
-        self.observation, rewards, terminals, infos = self.env.step(total_action)
-        return self.observation[self.controlled_agent_id]['obs'], rewards[self.controlled_agent_id], terminals[
-            self.controlled_agent_id], infos[self.controlled_agent_id]
+        self.observation, rewards, dones, infos = self.env.step(total_action)
+        return self.observation[self.controlled_agent_id]['obs'], rewards[self.controlled_agent_id], dones[
+            self.controlled_agent_id], False, infos[self.controlled_agent_id]
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         self.observation = self.env.reset()
-        return self.observation[self.controlled_agent_id]['obs']
+        return self.observation[self.controlled_agent_id]['obs'], {}
 
     def render(self, mode="human"):
         self.env.render(mode)
@@ -47,8 +48,8 @@ class PreSettedAgentsEnv(gym.Env):
             agent_id: RolloutInfo(presetted_policies[agent_id], np.zeros(self.env.action_space.shape))
             for agent_id in presetted_policies}
         self.controlled_agent_id = controlled_agent_id
-        self.observation_space = self.env.observation_space['obs']
-        self.action_space = self.env.action_space
+        self.observation_space = shimmy.openai_gym_compatibility._convert_space(self.env.observation_space['obs'])
+        self.action_space = shimmy.openai_gym_compatibility._convert_space(self.env.action_space)
 
     def close(self):
         self.env.close()
