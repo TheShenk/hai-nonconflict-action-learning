@@ -1,3 +1,5 @@
+import os
+
 import gymnasium.envs.registration
 from marllib import marl
 import minari
@@ -29,7 +31,8 @@ def run(settings):
     rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
-    rollout_env.save_to_disk(settings['save']['trajectory'])
+    dataset = minari.create_dataset_from_collector_env(f"{settings['env']['name']}-human-v0", rollout_env)
+    os.rename(dataset.spec.data_path, settings['save']['trajectory'])
     rollout_env.close()
     print("Average:", average_reward)
 

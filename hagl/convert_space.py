@@ -1,5 +1,8 @@
+from typing import Any
+
 import gym
 import gymnasium
+from gymnasium.utils.step_api_compatibility import convert_to_done_step_api
 
 
 def convert_space(space: gymnasium.Space) -> gym.Space:
@@ -38,3 +41,32 @@ def convert_space(space: gymnasium.Space) -> gym.Space:
         )
     else:
         return space
+
+
+class GymnasiumToGym(gym.Env):
+
+    def __init__(self, env: gymnasium.Env):
+        self.env = env
+        self.action_space = convert_space(self.env.action_space)
+        self.observation_space = convert_space(self.env.observation_space)
+
+    def reset(self):
+        observation, info = self.env.reset()
+        return observation
+
+    def step(self, action):
+        step_result = self.env.step(action)
+        return convert_to_done_step_api(step_result, False)
+
+    def render(self, mode="human"):
+        self.env.render()
+
+    def __getattr__(self, name: str) -> Any:
+        """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
+        if name == "_np_random":
+            raise AttributeError(
+                "Can't access `_np_random` of a wrapper, use `self.unwrapped._np_random` or `self.np_random`."
+            )
+        elif name.startswith("_") and name not in {"_cumulative_rewards"}:
+            raise AttributeError(f"accessing private attribute '{name}' is prohibited")
+        return getattr(self.env, name)

@@ -2,10 +2,8 @@ import pathlib
 import re
 from typing import Dict, Type
 
-import imitation.policies.base
+import minari
 import numpy as np
-import stable_baselines3
-import torch as th
 
 from imitation.data.types import TrajectoryWithRew
 from imitation.rewards.reward_nets import AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
@@ -18,25 +16,16 @@ from hmadrl.marllib_utils import find_latest_dir
 from hmadrl.settings_utils import get_save_dir
 
 
-def make_trajectories(trajectories_data: np.ndarray):
-    actions = trajectories_data['actions']
-    observations = trajectories_data['observations']
-    rewards = trajectories_data['rewards']
-    dones = trajectories_data['dones']
+def make_trajectories(trajectories_data: minari.MinariDataset):
 
+    print(trajectories_data.total_steps)
     trajectories = []
-    done_indexes, = np.where(dones)
-    observation_shift = 0
-
-    for previous_done, current_done in zip(np.append([0], done_indexes[:-1]), done_indexes):
-        trajectories.append(TrajectoryWithRew(acts=actions[previous_done:current_done],
-                                              obs=observations[
-                                                  previous_done + observation_shift:current_done + observation_shift + 1],
-                                              rews=rewards[previous_done:current_done],
-                                              infos=np.empty((current_done - previous_done,)),
+    for episode in trajectories_data.iterate_episodes():
+        trajectories.append(TrajectoryWithRew(acts=episode.actions,
+                                              obs=episode.observations,
+                                              rews=episode.rewards,
+                                              infos=np.empty((episode.total_timesteps,)),
                                               terminal=True))
-        observation_shift += 1
-
     return trajectories
 
 

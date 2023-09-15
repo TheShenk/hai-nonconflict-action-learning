@@ -5,6 +5,7 @@ from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
+from hagl.convert_space import GymnasiumToGym
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings, find_imitation_checkpoint
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env, find_latest_dir
@@ -16,9 +17,6 @@ parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to
 args = parser.parse_args()
 settings = load_settings(args.settings)
 import_user_code(settings["code"])
-
-trajectories = np.load(settings['save']['trajectory'])
-trajectories = make_trajectories(trajectories)
 
 env = make_env(settings['env'])
 env_instance, _ = env
@@ -33,6 +31,7 @@ human_agent = settings['rollout']['human_agent']
 policy_mapping.pop(human_agent, None)
 
 rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
+rollout_env = GymnasiumToGym(rollout_env)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 rollout_env.render_mode = "human"
 

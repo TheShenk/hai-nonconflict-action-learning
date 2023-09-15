@@ -1,15 +1,17 @@
 import argparse
 from time import time
 
+import gymnasium
+import minari
 import numpy as np
 import optuna
-import shimmy
 from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
+from hagl.convert_space import GymnasiumToGym
 from hmadrl.imitation_registry import IMITATION_REGISTRY
-from hmadrl.imitation_utils import make_trajectories, init_as_multiagent, create_wrapped_reward_net, \
+from hmadrl.imitation_utils import make_trajectories, init_as_multiagent, \
     create_imitation_models_from_settings
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
@@ -20,7 +22,7 @@ from hmadrl.settings_utils import load_settings, load_optuna_settings, \
 def run(settings):
     import_user_code(settings["code"])
 
-    trajectories = np.load(settings['save']['trajectory'])
+    trajectories = minari.MinariDataset(settings['save']['trajectory'])
     trajectories = make_trajectories(trajectories)
 
     rng = np.random.default_rng(0)
@@ -39,6 +41,7 @@ def run(settings):
     policy_mapping.pop(human_agent, None)
 
     rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
+    rollout_env = GymnasiumToGym(rollout_env)
     rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 
     def objective(trial: optuna.Trial):
