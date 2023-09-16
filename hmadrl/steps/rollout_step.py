@@ -31,8 +31,10 @@ def run(settings):
     rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
-    dataset = minari.create_dataset_from_collector_env(f"{settings['env']['name']}-human-v0", rollout_env)
-    os.rename(dataset.spec.data_path, settings['save']['trajectory'])
+    rollout_env.save_to_disk(settings['save']['trajectory'], {
+        "dataset_id": f"{settings['env']['name']}-human-v0",
+        "minari_version": "~=0.4.1"
+    })
     rollout_env.close()
     print("Average:", average_reward)
 
