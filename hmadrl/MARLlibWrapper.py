@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import functools
 from typing import Tuple
 
 import gym
+import gymnasium.spaces
 import numpy as np
 import pettingzoo
 import supersuit
+from pettingzoo.utils.env import AgentID, ActionType, ObsType
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.rllib.utils.typing import MultiAgentDict
 
@@ -28,14 +31,50 @@ class TimeLimit(pettingzoo.utils.BaseParallelWrapper):
         observation, reward, terminated, truncated, info = super().step(actions)
         self.elapsed_steps += 1
         if self.elapsed_steps > self.max_episode_steps:
-            truncated = {agent: True for agent in truncated}
+            terminated = {agent: True for agent in terminated}
+            # truncated = {agent: True for agent in truncated}
+        return observation, reward, terminated, truncated, info
+
+
+class Flatten(pettingzoo.utils.BaseParallelWrapper):
+
+    def __init__(self, env):
+        super().__init__(env)
+
+    @functools.lru_cache
+    def observation_space(self, agent):
+        return gymnasium.spaces.flatten_space(super().observation_space(agent))
+
+    @functools.lru_cache
+    def action_space(self, agent):
+        return gymnasium.spaces.flatten_space(super().action_space(agent))
+
+    def reset(self, seed: int | None = None, options: dict | None = None) \
+            -> tuple[dict[AgentID, ObsType], dict[AgentID, dict]]:
+        observation, info = super().reset(seed, options)
+        observation = {agent: gymnasium.spaces.flatten(self.env.observation_space(agent), obs)
+                       for agent, obs in observation.items()}
+        return observation, info
+
+    def step(self, actions: dict[AgentID, ActionType]) -> tuple[
+        dict[AgentID, ObsType],
+        dict[AgentID, float],
+        dict[AgentID, bool],
+        dict[AgentID, bool],
+        dict[AgentID, dict],
+    ]:
+        actions = {agent: gymnasium.spaces.unflatten(self.env.action_space(agent), act)
+                   for agent, act in actions.items()}
+        observation, reward, terminated, truncated, info = super().step(actions)
+        observation = {agent: gymnasium.spaces.flatten(self.env.observation_space(agent), obs)
+                       for agent, obs in observation.items()}
+
         return observation, reward, terminated, truncated, info
 
 
 class MARLlibWrapper(MultiAgentEnv):
 
     def __init__(self, env: pettingzoo.ParallelEnv, max_episode_len, policy_mapping_info):
-
         super().__init__()
 
         # keep obs and action dim same across agents
