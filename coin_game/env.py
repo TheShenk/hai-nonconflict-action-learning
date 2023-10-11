@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import random
 from copy import deepcopy
 
@@ -27,9 +28,11 @@ class CoinGame(pettingzoo.ParallelEnv):
         self.prev_actions = {agent: [random.randint(0, 1) for _ in range(self.prev_actions_num)] for agent in self.agents}
         return self._observation(), {agent: {} for agent in self.agents}
 
+    @functools.lru_cache(maxsize=None)
     def action_space(self, agent: AgentID) -> gymnasium.spaces.Space:
         return gymnasium.spaces.MultiBinary(1)
 
+    @functools.lru_cache(maxsize=None)
     def observation_space(self, agent: AgentID) -> gymnasium.spaces.Space:
         return gymnasium.spaces.MultiBinary((self.agents_num, self.prev_actions_num, ))
 
@@ -48,11 +51,11 @@ class CoinGame(pettingzoo.ParallelEnv):
         dict[AgentID, bool],
         dict[AgentID, dict],
     ]:
-        values = actions.values()
+        values = np.array(list(actions.values()))
         if all(values):
             reward = {agent: 0 for agent in self.agents}
         elif any(values):
-            reward = {agent: 3 if actions[agent] else -1 for agent in self.agents}
+            reward = {agent: 3 if actions[agent][0] else -1 for agent in self.agents}
         else:
             reward = {agent: 2 for agent in self.agents}
 
