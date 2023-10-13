@@ -15,6 +15,17 @@ class CustomPolicy(Policy):
     def __init__(self, observation_space, action_space, config):
         super().__init__(observation_space, action_space, config)
         self.advantages = 0
+        self._make_model(observation_space, action_space)
+
+    def _make_model(self, observation_space, action_space):
+        dist_class, logit_dim = ModelCatalog.get_action_dist(
+            action_space, self.config["model"], framework="torch")
+        self.model = ModelCatalog.get_model_v2(
+            obs_space=observation_space,
+            action_space=action_space,
+            num_outputs=logit_dim,
+            model_config=self.config["model"],
+            framework="torch")
 
     @abstractmethod
     def collect_action(self, obs):
@@ -37,20 +48,6 @@ class CustomPolicy(Policy):
     def set_weights(self, weights) -> None:
         pass
 
-
-def ImitationPolicy(imitation_policy, model_class, n_agents):
-    return lambda observation_space, action_space, config: \
-        _ImitationPolicy(imitation_policy, model_class, n_agents, observation_space, action_space, config)
-
-
-class _ImitationPolicy(CustomPolicy):
-
-    def __init__(self, imitation_policy, model_cls, n_agents, observation_space, action_space, config):
-        super().__init__(observation_space, action_space, config)
-        self.imitation_policy = imitation_policy
-        self.n_agents = n_agents
-        self._make_model(observation_space, action_space)
-
     def postprocess_trajectory(self, sample_batch: SampleBatch,
                                other_agent_batches: Optional[Dict[AgentID, Tuple["Policy", SampleBatch]]] = None,
                                episode: Optional["MultiAgentEpisode"] = None) -> SampleBatch:
@@ -67,16 +64,35 @@ class _ImitationPolicy(CustomPolicy):
 
         return sample_batch
 
-    def _make_model(self, observation_space, action_space):
-        dist_class, logit_dim = ModelCatalog.get_action_dist(
-            action_space, self.config["model"], framework="torch")
-        self.model = ModelCatalog.get_model_v2(
-            obs_space=observation_space,
-            action_space=action_space,
-            num_outputs=logit_dim,
-            model_config=self.config["model"],
-            framework="torch")
+
+def ImitationPolicy(imitation_policy, model_class, n_agents):
+    return lambda observation_space, action_space, config: \
+        _ImitationPolicy(imitation_policy, model_class, n_agents, observation_space, action_space, config)
+
+
+class _ImitationPolicy(CustomPolicy):
+
+    def __init__(self, imitation_policy, model_cls, n_agents, observation_space, action_space, config):
+        super().__init__(observation_space, action_space, config)
+        self.imitation_policy = imitation_policy
+        self.n_agents = n_agents
 
     def collect_action(self, obs):
         action, _ = self.imitation_policy.predict(obs)
+        return action
+
+
+def HumanPolicy(policy):
+    return lambda observation_space, action_space, config: \
+        _HumanPolicy(policy, observation_space, action_space, config)
+
+
+class _HumanPolicy(CustomPolicy):
+
+    def __init__(self, human_policy, observation_space, action_space, config):
+        super().__init__(observation_space, action_space, config)
+        self.human_policy = human_policy
+
+    def collect_action(self, obs):
+        action = self.human_policy(obs)
         return action

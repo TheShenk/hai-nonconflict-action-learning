@@ -19,12 +19,17 @@ env = make_env(settings['env'])
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
 model = marl.build_model(env, algo, model_settings)
 
-local_dir, _ = get_save_settings(settings['save']['multiagent'])
-checkpoint_path = find_checkpoint(algo.name,
-                                  env[1]['env_args']['map_name'],
-                                  model[1]['model_arch_args']['core_arch'],
-                                  local_dir)
-params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
+local_dir, checkpoint = get_save_settings(settings['save']['multiagent'])
+if not checkpoint["model_path"]:
+    checkpoint_path = find_checkpoint(algo.name,
+                                      env[1]['env_args']['map_name'],
+                                      model[1]['model_arch_args']['core_arch'],
+                                      local_dir)
+    params_path = pathlib.Path(checkpoint_path).parent / '..' / 'params.json'
+else:
+    checkpoint_path = checkpoint["model_path"]
+    params_path = checkpoint["params_path"]
+
 local_dir = pathlib.Path(local_dir) / 'results'
 
 algo.render(env, model,

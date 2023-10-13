@@ -7,7 +7,7 @@ import argparse
 from marllib.marl import POlICY_REGISTRY, recursive_dict_update
 from ray.rllib.policy.policy import PolicySpec
 
-from hmadrl.custom_policy import ImitationPolicy
+from hmadrl.custom_policy import ImitationPolicy, HumanPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.imitation_utils import find_imitation_checkpoint
 from hmadrl.marllib_utils import find_checkpoint, create_policy_mapping, get_config, find_latest_dir, make_env
@@ -15,7 +15,7 @@ from hmadrl.settings_utils import load_settings, import_user_code, get_save_sett
 
 
 def run(settings):
-    import_user_code(settings["code"])
+    user = import_user_code(settings["code"])
 
     local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
     model_path, params_path = restore_path["model_path"], restore_path["params_path"]
@@ -48,6 +48,7 @@ def run(settings):
 
     policies = {f'policy_{agent_num}': PolicySpec() for agent_num, agent_id in enumerate(env_instance.agents) if agent_id != settings["rollout"]["human_agent"]}
     policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class, len(env_instance.agents)))
+    # policies["human"] = PolicySpec(HumanPolicy(user.policy))
 
     policy_mapping = create_policy_mapping(env_instance)
     policy_mapping[settings["rollout"]["human_agent"]] = "human"

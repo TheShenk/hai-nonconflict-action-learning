@@ -160,10 +160,13 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
     model_class, model_info = model
 
     local_dir, restore_path = get_save_settings(multiagent_save_settings)
-    checkpoint_path = find_checkpoint(algo.name,
-                                      env_info['env_args']['map_name'],
-                                      model_info['model_arch_args']['core_arch'],
-                                      local_dir)
+    if not restore_path["model_path"]:
+        checkpoint_path = find_checkpoint(algo.name,
+                                          env_info['env_args']['map_name'],
+                                          model_info['model_arch_args']['core_arch'],
+                                          local_dir)
+    else:
+        checkpoint_path = restore_path["model_path"]
 
     custom_model = None
     if algo.name in {'iddpg', 'maddpg', 'facmac'}:
