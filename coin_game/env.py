@@ -55,7 +55,7 @@ class CoinGame(pettingzoo.ParallelEnv):
         if all(values):
             reward = {agent: 0 for agent in self.agents}
         elif any(values):
-            reward = {agent: 1 if actions[agent][0] else -1 for agent in self.agents}
+            reward = {agent: 3 if actions[agent][0] else -1 for agent in self.agents}
         else:
             reward = {agent: 2 for agent in self.agents}
 

@@ -58,8 +58,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def __init__(self, teams_count,
                  team_snakes_count, size: Tuple[int, int] = (15, 15),
-                 min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1,
-                 n_prev_obs=4, render_mode="human"):
+                 min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1, render_mode="human"):
 
         super().__init__()
         self.teams_count = teams_count
@@ -70,7 +69,8 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.render_mode = render_mode
 
         self.size = size
-        self.n_prev_obs = n_prev_obs
+        self.max_dist = sum(size)
+
         self.min_food_count = min_food_count
         self.food_spawn_interval = food_spawn_interval
         self.food_reward = food_reward
@@ -90,8 +90,6 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.action_spaces = {agent: Action for agent in self.possible_agents}
 
         self.renderer = None
-        self.observation_stack = [np.zeros(self.size, dtype=np.float32) for _ in range(n_prev_obs)]
-
         self.metadata = {"render.mode": ["human"]}
 
     def reset(self, seed=None, options=None):
@@ -117,10 +115,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.reward = {agent: 0.0 for agent in self.agents}
         self.eliminated_agents = set()
 
-        self.observation_stack = [np.zeros(self.size, dtype=np.float32) for _ in range(self.n_prev_obs)]
-        self.observation_stack.append(self.as_array())
-        self.observation_stack = self.observation_stack[1:]
-        observation = np.stack(self.observation_stack)
+        observation = self.as_bool_array()
         observation = {agent: observation for agent in self.agents}
         info = {agent: {} for agent in self.agents}
 
@@ -128,7 +123,8 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def step(self, action: Dict[str, np.array]):
 
-        self.reward = {agent: 0.0 for agent in action}
+        self.reward = {agent: (self.find_closest_food(self.snakes[agent].head())[1] / self.max_dist) * self.food_reward
+                       for agent in action}
         action = {agent: Action(np.argmax(act) + 1) for agent, act in action.items()}
 
         for agent in self.agents:
@@ -145,9 +141,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         end_game = self.check_end_game()
 
-        self.observation_stack.append(self.as_array())
-        self.observation_stack = self.observation_stack[1:]
-        observation = np.stack(self.observation_stack)
+        observation = self.as_bool_array()
         observation = {agent: observation for agent in action}
         if end_game:
             terminated = {agent: True for agent in action}
@@ -157,6 +151,22 @@ class BattleSnake(pettingzoo.ParallelEnv):
         info = {agent: {} for agent in action}
 
         return observation, self.reward, terminated, truncated, info
+
+    def find_closest_food(self, pos):
+
+        def distance(point1, point2):
+            return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
+
+        closest_food = next(iter(self.food))
+        min_dist = distance(closest_food, pos)
+
+        for food in self.food:
+            dist = distance(food, pos)
+            if dist < min_dist:
+                closest_food = food
+                min_dist = dist
+
+        return closest_food, min_dist
 
     def check_health(self):
         eliminate_agents = []
@@ -252,7 +262,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
         return tuple(index)
 
     def observation_space(self, agent: AgentID):
-        return gymnasium.spaces.Box(0, 6, (15 * self.n_prev_obs, 15))
+        return gymnasium.spaces.MultiBinary(self.size + (self.snakes_count + 1,))
 
     def action_space(self, agent: AgentID):
         return ActionSpace

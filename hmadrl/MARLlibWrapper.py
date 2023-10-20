@@ -30,7 +30,7 @@ class TimeLimit(pettingzoo.utils.BaseParallelWrapper):
     def step(self, actions):
         observation, reward, terminated, truncated, info = super().step(actions)
         self.elapsed_steps += 1
-        if self.elapsed_steps > self.max_episode_steps:
+        if self.elapsed_steps >= self.max_episode_steps:
             terminated = {agent: True for agent in terminated}
             # truncated = {agent: True for agent in truncated}
         return observation, reward, terminated, truncated, info
