@@ -40,7 +40,7 @@ class BattleSnakeRenderer:
         self.env = env
         self.human_mode = human_mode
 
-        if self.human_mode:
+        if self.human_mode and not pygame.get_init():
             pygame.init()
             pygame.key.set_repeat(1, 1)
 

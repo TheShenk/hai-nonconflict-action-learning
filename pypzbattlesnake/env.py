@@ -123,12 +123,15 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def step(self, action: Dict[str, np.array]):
 
-        self.reward = {agent: (self.find_closest_food(self.snakes[agent].head())[1] / self.max_dist) * self.food_reward
-                       for agent in action}
         action = {agent: Action(np.argmax(act) + 1) for agent, act in action.items()}
+
+        before_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in action}
 
         for agent in self.agents:
             self.snakes[agent].step(action[agent])
+
+        after_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in action}
+        self.reward = {agent: (before_food_distance[agent] - after_food_distance[agent]) / self.max_dist * self.food_reward for agent in action}
 
         self.check_health()
         self.check_border_collisions()
