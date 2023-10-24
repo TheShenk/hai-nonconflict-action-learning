@@ -209,11 +209,13 @@ class HAGLAECWrapper(pettingzoo.AECEnv):
     def render(self, mode: str = "human") -> RenderFrame | list[RenderFrame] | None:
         return self.env.render(mode)
 
+    @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         hagl_action_space = self.env.action_space(agent)
         gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
         return convert_space(gymnasium.spaces.flatten_space(gymnasium_action_space))
 
+    @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         hagl_observation_space = self.env.observation_space(agent)
         gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
@@ -249,3 +251,32 @@ class HAGLModel:
         hagl_action = hagl.construct(self.hagl_action_space, gymnasium_action, self.template_values)
 
         return hagl_action
+
+class HAGLPolicy:
+
+    def __init__(self, policy, hagl_observation_space=None, hagl_action_space=None, template_values=None):
+        if template_values is None:
+            template_values = dict()
+
+        self.hagl_action_space, self.hagl_observation_space = hagl_action_space, hagl_observation_space
+        self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+        self.template_values.update(template_values)
+
+        self.gymnasium_action_space, self.gymnasium_observation_space \
+            = hagl.compile(self.hagl_action_space, self.hagl_observation_space, template_values)
+        self.action_space = gymnasium.spaces.flatten_space(self.gymnasium_action_space)
+        self.observation_space = gymnasium.spaces.flatten_space(self.gymnasium_observation_space)
+
+        self.policy = policy
+
+    def __call__(self, observation):
+
+        gymnasium_observation = gymnasium.spaces.unflatten(self.gymnasium_observation_space, observation)
+        hagl_observation = hagl.construct(self.hagl_observation_space, gymnasium_observation, self.template_values)
+
+        hagl_action = self.policy(hagl_observation)
+
+        gymnasium_action = hagl.deconstruct(self.hagl_action_space, hagl_action, self.template_values)
+        action = gymnasium.spaces.flatten(self.gymnasium_action_space, gymnasium_action)
+
+        return action
