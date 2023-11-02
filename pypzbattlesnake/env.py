@@ -1,3 +1,4 @@
+import functools
 from typing import Tuple, Dict, Set
 
 import gymnasium
@@ -10,7 +11,6 @@ from .renderer import BattleSnakeRenderer
 
 EMPTY_COLOR = 0
 FOOD_COLOR = 1
-
 BASE_COLORS_COUNT = 2  # empty, food
 
 ActionSpace = gymnasium.spaces.Box(0, 1, (5,))
@@ -70,6 +70,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         self.size = size
         self.max_dist = sum(size)
+        self.init_positions = self._get_init_pos()
 
         self.min_food_count = min_food_count
         self.food_spawn_interval = food_spawn_interval
@@ -92,6 +93,25 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.renderer = None
         self.metadata = {"render.mode": ["human"]}
 
+    def _get_init_pos(self):
+        inner_square_size = (self.size[0] - 2, self.size[1] - 2)
+        place_cells_count = 2 * (sum(inner_square_size) - 2)
+        directions = [[1, 0], [0, 1], [-1, 0], [0, -1]]
+
+        current_pos = (0, 0)
+        current_direction = 0
+
+        possible_pos = [current_pos]
+        for i in range(0, place_cells_count):
+            current_pos = (current_pos[0] + directions[current_direction][0],
+                           current_pos[1] + directions[current_direction][1])
+            if current_pos in {(inner_square_size[0] - 1, 0), (0, inner_square_size[1] - 1), (inner_square_size[0] - 1, inner_square_size[1] - 1)}:
+                current_direction += 1
+            possible_pos.append(current_pos)
+
+        place_gap = place_cells_count // self.snakes_count
+        return [(possible_pos[i][0] + 1, possible_pos[i][1] + 1) for i in range(0, place_cells_count, place_gap)]
+
     def reset(self, seed=None, options=None):
 
         if seed is not None:
@@ -104,10 +124,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         Snake._color = FOOD_COLOR
         self.snakes = {}
-
+        snake_position = iter(self.init_positions)
         for idx, team in enumerate(self.teams):
             for agent in team:
-                self.snakes[agent] = Snake(self.random_empty_position(), team=idx)
+                self.snakes[agent] = Snake(next(snake_position), team=idx)
 
         self.food = {self.random_empty_position() for _ in range(self.min_food_count)}
         self.food_spawn_timer = 0
@@ -127,8 +147,8 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         before_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in action}
 
-        for agent in self.agents:
-            self.snakes[agent].step(action[agent])
+        for agent, act in action.items():
+            self.snakes[agent].step(act)
 
         after_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in action}
         self.reward = {agent: (before_food_distance[agent] - after_food_distance[agent]) / self.max_dist * self.food_reward for agent in action}
@@ -148,6 +168,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
         observation = {agent: observation for agent in action}
         if end_game:
             terminated = {agent: True for agent in action}
+            self.eliminate(self.agents.copy())
         else:
             terminated = {agent: agent in self.eliminated_agents for agent in action}
         truncated = {agent: False for agent in action}
@@ -245,15 +266,12 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def as_bool_array(self):
         field = np.zeros(self.size + (BASE_COLORS_COUNT + self.snakes_count - 1,), dtype=np.bool8)
-        field_index = 0
-
         for x, y in self.food:
-            field[x][y][field_index] = True
+            field[x][y][FOOD_COLOR - 1] = True
 
         for agent, snake in self.snakes.items():
-            field_index += 1
             for x, y in snake.body:
-                field[x][y][field_index] = True
+                field[x][y][snake.color - 1] = True
 
         return field
 
@@ -264,9 +282,11 @@ class BattleSnake(pettingzoo.ParallelEnv):
         index = rng.choice(empty_indices, axis=0)
         return tuple(index)
 
+    @functools.lru_cache(maxsize=None)
     def observation_space(self, agent: AgentID):
         return gymnasium.spaces.MultiBinary(self.size + (self.snakes_count + 1,))
 
+    @functools.lru_cache(maxsize=None)
     def action_space(self, agent: AgentID):
         return ActionSpace
 
