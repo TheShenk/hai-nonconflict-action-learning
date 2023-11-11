@@ -3,6 +3,7 @@ import pettingzoo
 from pettingzoo.utils import agent_selector
 from pettingzoo.test import performance_benchmark
 
+
 class BenchmarkAECHAGLEnv:
 
     def __init__(self, hagl_observation_space, hagl_action_space):
@@ -90,20 +91,16 @@ class BenchmarkAECEnv(pettingzoo.AECEnv):
         return self.gymnasium_observation_space
 
 
-class Observation:
+class ComplexSpace:
     value = float
     value_array = [float, 32]
     position = hagl.Position
     velocity = hagl.Limit(hagl.Velocity, low=-3.14, high=3.14)
 
 
-class Action:
-    value = float
-
-
-env = BenchmarkAECHAGLEnv(Observation, Action)
+env = BenchmarkAECHAGLEnv(ComplexSpace, ComplexSpace)
 env = hagl.HAGLAECWrapper(env)
 performance_benchmark(env)
 
-# env = BenchmarkAECEnv(env.observation_space("agent_0"), env.action_space("agent_0"))
-# performance_benchmark(env)
+env = BenchmarkAECEnv(env.observation_space("agent_0"), env.action_space("agent_0"))
+performance_benchmark(env)
