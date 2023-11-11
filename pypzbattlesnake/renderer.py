@@ -4,7 +4,7 @@ import numpy as np
 import pygame
 import colorsys
 
-from .common import Action, ACTION_BY_SHIFT
+from .common import Action, ACTION_BY_SHIFT, BASE_COLORS_COUNT
 
 BACKGROUND_COLOR = (255, 255, 255)
 CELL_COLOR = (220, 217, 205)
@@ -27,7 +27,10 @@ ROTATE_BY_DIRECTION = {
 
 def random_color():
     h = np.random.default_rng().random()
-    return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.3, 1.0)))
+    return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.4, 0.8)))
+
+
+PALITE = [(0, 104, 139), (159, 0, 255), (212, 137, 28), (0, 155, 92)]
 
 
 def get_shift(cell_a, cell_b):
@@ -51,7 +54,9 @@ class BattleSnakeRenderer:
         self.screen = pygame.display.set_mode((size_x, size_y))
 
         self.field: list[list[pygame.Rect]] = []
-        self.snake_colors = {snake.color: random_color() for _, snake in self.env.snakes.items()}
+        self.snake_colors = {snake.color: random_color()
+        if snake.color-BASE_COLORS_COUNT > len(PALITE) else PALITE[snake.color-BASE_COLORS_COUNT]
+        for _, snake in self.env.snakes.items()}
 
         rect_x = GRID_PADDING
         for x in range(self.env.size[0]):

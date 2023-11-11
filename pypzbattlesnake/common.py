@@ -1,5 +1,9 @@
 import enum
 
+EMPTY_COLOR = 0
+FOOD_COLOR = 1
+BASE_COLORS_COUNT = 2  # empty, food
+
 
 class Action(enum.IntEnum):
     UP = enum.auto()

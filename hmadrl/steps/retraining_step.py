@@ -57,10 +57,8 @@ def run(settings):
     policies_to_train = [policy_mapping[agent_id] for agent_id in policies_to_train]
     assert "human" not in policies_to_train, "Don't specify human_agent in policies_to_train"
 
-
     def policy_mapping_fn(agent_id):
         return policy_mapping[agent_id]
-
 
     exp_info = env_info
     exp_info = recursive_dict_update(exp_info, model_info)
