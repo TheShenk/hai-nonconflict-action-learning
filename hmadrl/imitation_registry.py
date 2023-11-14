@@ -1,15 +1,16 @@
 import pathlib
 from typing import Dict, Type
 
+import stable_baselines3.common.off_policy_algorithm
 import torch as th
 
 from imitation.algorithms.adversarial.airl import AIRL
 from imitation.algorithms.adversarial.gail import GAIL
 from imitation.algorithms import bc
 from imitation.algorithms.density import DensityAlgorithm
-# from imitation.algorithms.sqil import SQIL #TODO: when PyPi version will be updated
-from imitation.policies.base import FeedForward32Policy, SAC1024Policy, ZeroPolicy, RandomPolicy
+from imitation.algorithms.sqil import SQIL, SQILReplayBuffer
 from imitation.util.logger import configure
+from imitation.util import util
 
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
@@ -83,12 +84,10 @@ class BCTrainer(ImitationTrainer):
     @staticmethod
     def load(checkpoint_path: str, device, inner_algo=None):
         checkpoint_path = pathlib.Path(checkpoint_path)
-        return (bc.reconstruct_policy(str(checkpoint_path / "model.zip"), device),
-                th.load(str(checkpoint_path / "reward_net.pt")))
+        return bc.reconstruct_policy(str(checkpoint_path / "model.zip"), device), None
 
     def save(self):
-        th.save(self.reward_net, self.reward_net_path)
-        self.trainer.save_policy(self.model_path)
+        util.save_policy(self.trainer.policy, self.model_path)
 
     def train(self, epochs):
         self.trainer.train(n_epochs=epochs)
@@ -141,24 +140,48 @@ class DensityTrainer(BaseImitationTrainer):
         self.trainer.train()
 
 
-class SQILTrainer(BaseImitationTrainer):
+class SQILTrainer(ImitationTrainer):
 
     def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
-        super().__init__(None, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path) # TODO: Fixme
+        super().__init__(venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
+        self.replay_buffer = SQILReplayBuffer(
+            inner_algo.buffer_size,
+            inner_algo.observation_space,
+            inner_algo.action_space,
+            device=inner_algo.device,
+            n_envs=inner_algo.n_envs,
+            optimize_memory_usage=inner_algo.optimize_memory_usage,
+            demonstrations=demonstrations
+        )
+        self.trainer = SQIL(venv=venv,
+                            policy=algo_args.get("policy", "MlpPolicy"),
+                            demonstrations=demonstrations,
+                            rl_algo_class=type(inner_algo),
+                            **algo_args)
+        inner_algo.replay_buffer = self.replay_buffer
+        self.trainer.rl_algo = inner_algo
+
+    @staticmethod
+    def load(checkpoint_path: str, device, inner_algo=None):
+        checkpoint_path = pathlib.Path(checkpoint_path)
+        return inner_algo.load(path=str(checkpoint_path / "model.zip"),
+                               device=device), None
+
+    def save(self):
+        self.trainer.rl_algo.save(self.model_path)
 
     def train(self, timesteps):
-        self.trainer.train()
+        self.trainer.train(total_timesteps=timesteps)
 
 
 IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "bc": BCTrainer,
     "gail": GAILTrainer,
     "airl": AIRLTrainer,
-    # "density": DensityTrainer, #Incompatible becouse of using gym instead of gymnasium. Maybe will be fixed in future?
-    # "sqil": SQILTrainer #TODO: when imitation version will be updated
+    "density": DensityTrainer,
+    "sqil": SQILTrainer
     # TODO: dagger (требует слияния 2 и 3 шага),
     #  MCE-IRL (поддерживает только TabularPOMDP среды из библиотеки seals)
-    #  DI-engine
 }
 
 RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {

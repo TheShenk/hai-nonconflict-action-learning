@@ -13,9 +13,8 @@ MULTIAGENT_ALGORITHMS = ['itrpo', 'matrpo', 'hatrpo', 'ippo', 'mappo', 'vdppo', 
 
 IMITATION_ALGORITHMS = list(IMITATION_REGISTRY.keys())
 RL_ALGORITHMS = list(RL_REGISTRY.keys())
-
 ALL_STEPS_ALGORITHMS = list(set([(algo, "gail", "ppo") for algo in MULTIAGENT_ALGORITHMS] +
-                                [("mappo", algo, "ppo") for algo in IMITATION_ALGORITHMS] +
+                                [("mappo", algo, "ddpg" if algo in {"sqil"} else "ppo") for algo in IMITATION_ALGORITHMS] +
                                 [("mappo", "gail", algo) for algo in RL_ALGORITHMS]))
 
 
@@ -50,7 +49,7 @@ def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo, discr
             "timesteps": 5 if imitation_inner_algo in {"ddpg", "td3", "sac", "tqc"} or imitation_algo == "bc" else 2048,
             "algo": {
                 "name": imitation_algo,
-                "args": {} if imitation_algo in {"bc", "density"} else {
+                "args": {} if imitation_algo in {"bc", "density", "sqil"} else {
                     "demo_batch_size": 128
                 }
             },
