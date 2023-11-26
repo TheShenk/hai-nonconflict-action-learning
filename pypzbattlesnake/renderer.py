@@ -30,7 +30,7 @@ def random_color():
     return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.4, 0.8)))
 
 
-PALITE = [(0, 104, 139), (159, 0, 255), (212, 137, 28), (0, 155, 92)]
+PALITE = [(0, 104, 139), (0, 104, 139), (159, 0, 255), (159, 0, 255), (212, 137, 28), (212, 137, 28), (0, 155, 92), (0, 155, 92)]
 
 
 def get_shift(cell_a, cell_b):
