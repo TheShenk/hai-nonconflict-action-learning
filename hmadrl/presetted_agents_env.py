@@ -26,7 +26,7 @@ class PreSettedAgentsEnv(gymnasium.Env):
 
     def step(self, action):
         total_action = {agent_id: self.presetted_policies[agent_id].predict(self.observation[agent_id])
-                        for agent_id in self.presetted_policies}
+                        for agent_id in self.env.agents if agent_id in self.presetted_policies}
 
         total_action[self.controlled_agent_id] = action
         self.observation, rewards, dones, infos = self.env.step(total_action)

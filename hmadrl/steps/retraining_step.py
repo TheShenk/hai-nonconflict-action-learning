@@ -38,7 +38,9 @@ def run(settings):
     humanoid_model, _ = IMITATION_REGISTRY[settings['imitation']['algo']['name']].load(humanoid_model_path, 'cpu',
                                                                                        inner_algo_cls)
 
-    env = make_env(settings['env'])
+    env_settings = settings['env']
+    env_settings["step"] = "retraining"
+    env = make_env(env_settings)
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                               **multiagent_params['model']['custom_model_config'].get('algo_args', {}))
     model = marl.build_model(env, algo, multiagent_params['model']['custom_model_config']['model_arch_args'])

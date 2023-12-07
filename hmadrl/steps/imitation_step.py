@@ -8,6 +8,7 @@ import optuna
 from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+from tqdm import tqdm
 
 from hagl.convert_space import GymnasiumToGym
 from hmadrl.imitation_registry import IMITATION_REGISTRY
@@ -27,7 +28,9 @@ def run(settings):
 
     rng = np.random.default_rng(0)
 
-    env = make_env(settings['env'])
+    env_settings = settings['env']
+    env_settings["step"] = "imitation"
+    env = make_env(env_settings)
     env_instance, _ = env
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                               **settings['multiagent']['algo']['args'])
@@ -61,8 +64,17 @@ def run(settings):
         trainer = IMITATION_REGISTRY[optuna_settings['algo']['name']](rollout_env, trajectories, rng, inner_algo,
                                                                       reward_net,
                                                                       optuna_settings['algo'].get('args', {}), path)
-        trainer.train(settings['imitation']['timesteps'])
-        trainer.save()
+        total_timesteps = settings['imitation']['timesteps']
+        checkpoint_freq = settings['imitation'].get("checkpoint_freq", total_timesteps)
+        trained_timesteps = 0
+
+        progress_bar = tqdm(total=total_timesteps)
+        while trained_timesteps < total_timesteps:
+            current_timesteps = min(checkpoint_freq, total_timesteps - trained_timesteps)
+            trainer.train(current_timesteps)
+            trained_timesteps += current_timesteps
+            progress_bar.update(current_timesteps)
+            trainer.save()
 
         policy, _ = trainer.load(path, 'cpu', type(inner_algo))
         mean, std = evaluate_policy(policy, rollout_env)

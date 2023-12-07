@@ -15,7 +15,9 @@ import_user_code(settings["code"])
 algo_settings = load_tune_settings(settings['multiagent']['algo']['args'])
 model_settings = load_tune_settings(settings['multiagent']['model'])
 
-env = make_env(settings['env'])
+env_settings = settings['env']
+env_settings["step"] = "multiagent-result"
+env = make_env(env_settings)
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
 model = marl.build_model(env, algo, model_settings)
 

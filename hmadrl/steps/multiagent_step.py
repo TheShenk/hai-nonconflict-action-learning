@@ -13,7 +13,9 @@ def run(settings):
 
     local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
 
-    env = make_env(settings['env'])
+    env_settings = settings['env']
+    env_settings["step"] = "multiagent"
+    env = make_env(env_settings)
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
     model = marl.build_model(env, algo, model_settings)
     algo.fit(env, model,

@@ -27,9 +27,8 @@ class ImitationTrainer:
         self.reward_net = reward_net
         self.algo_args = algo_args
         self.path = pathlib.Path(path)
-        self.model_path = str(self.path / "model.zip")
-        self.reward_net_path = str(self.path / "reward_net.pt")
         self.logger = configure(self.path, ('tensorboard',))
+        self.timesteps = 0
 
     @staticmethod
     def load(path, device, inner_algo):
@@ -39,6 +38,7 @@ class ImitationTrainer:
         pass
 
     def train(self, timesteps):
+        self.timesteps += timesteps
         pass
 
 
@@ -61,10 +61,14 @@ class BaseImitationTrainer(ImitationTrainer):
                 th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
-        th.save(self.reward_net, self.reward_net_path)
-        self.inner_algo.save(self.model_path)
+        model_path = str(self.path / str(self.timesteps) / "model.zip")
+        reward_net_path = str(self.path / str(self.timesteps) / "reward_net.pt")
+
+        th.save(self.reward_net, reward_net_path)
+        self.inner_algo.save(model_path)
 
     def train(self, timesteps):
+        super().train(timesteps)
         self.trainer.train(timesteps)
 
 
@@ -87,9 +91,11 @@ class BCTrainer(ImitationTrainer):
         return bc.reconstruct_policy(str(checkpoint_path / "model.zip"), device), None
 
     def save(self):
-        util.save_policy(self.trainer.policy, self.model_path)
+        model_path = str(self.path / str(self.timesteps) / "model.zip")
+        util.save_policy(self.trainer.policy, model_path)
 
     def train(self, epochs):
+        super().train(epochs)
         self.trainer.train(n_epochs=epochs)
 
 
@@ -112,10 +118,14 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
                 th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
-        th.save(self.reward_net, self.reward_net_path)
-        self.inner_algo.save(self.model_path)
+        model_path = str(self.path / str(self.timesteps) / "model.zip")
+        reward_net_path = str(self.path / str(self.timesteps) / "reward_net.pt")
+
+        th.save(self.reward_net, reward_net_path)
+        self.inner_algo.save(model_path)
 
     def train(self, timesteps):
+        super().train(timesteps)
         self.trainer.train(timesteps)
 
 
@@ -168,9 +178,11 @@ class SQILTrainer(ImitationTrainer):
                                device=device), None
 
     def save(self):
-        self.trainer.rl_algo.save(self.model_path)
+        model_path = str(self.path / str(self.timesteps) / "model.zip")
+        self.trainer.rl_algo.save(model_path)
 
     def train(self, timesteps):
+        super().train(timesteps)
         self.trainer.train(total_timesteps=timesteps)
 
 

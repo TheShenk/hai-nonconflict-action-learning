@@ -13,7 +13,9 @@ from hmadrl.settings_utils import load_settings, import_user_code
 def run(settings):
     user = import_user_code(settings["code"])
 
-    env = make_env(settings['env'])
+    env_settings = settings['env']
+    env_settings["step"] = "rollout"
+    env = make_env(env_settings)
     env_instance, _ = env
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                               **settings['multiagent']['algo']['args'])

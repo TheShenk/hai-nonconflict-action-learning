@@ -7,6 +7,7 @@ import cloudpickle
 import gym
 import pettingzoo
 import ray.tune
+import supersuit
 from ray.rllib import MultiAgentEnv
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
@@ -29,7 +30,7 @@ from marllib.marl.algos.core.VD.facmac import FACMACTrainer
 from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
 
-from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper
+from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper, TimeLimit
 from hmadrl.settings_utils import get_save_settings, find_checkpoint_in_dir
 
 
@@ -179,7 +180,7 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
 
 
 def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
-    policy_mapping = {agent_id: f"policy_{agent_number}" for agent_number, agent_id in enumerate(env.agents)}
+    policy_mapping = {agent_id: f"policy_{agent_number}" for agent_number, agent_id in enumerate(env.possible_agents)}
     return policy_mapping
 
 
@@ -211,6 +212,10 @@ def register_env(environment_name: str,
 
     def create_coop_marllib_fn(config: dict):
         env = create_fn(config)
+        env = TimeLimit(env, max_episode_len)
+        env = supersuit.pad_observations_v0(env)
+        env = supersuit.pad_action_space_v0(env)
+        env = supersuit.black_death_v3(env)
         return CoopMARLlibWrapper(env, max_episode_len, policy_mapping_info)
 
     ENV_REGISTRY[environment_name] = create_marllib_fn
