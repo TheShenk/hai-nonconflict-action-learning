@@ -1,4 +1,5 @@
 import argparse
+import pathlib
 from time import time
 
 import gymnasium
@@ -13,7 +14,7 @@ from tqdm import tqdm
 from hagl.convert_space import GymnasiumToGym
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, init_as_multiagent, \
-    create_imitation_models_from_settings
+    create_imitation_models_from_settings, get_inner_algo_class_from_settings
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
 from hmadrl.settings_utils import load_settings, load_optuna_settings, \
@@ -76,7 +77,7 @@ def run(settings):
             progress_bar.update(current_timesteps)
             trainer.save()
 
-        policy, _ = trainer.load(path, 'cpu', type(inner_algo))
+        policy, _ = trainer.load(str(pathlib.Path(path) / str(total_timesteps)), 'cpu', type(inner_algo))
         mean, std = evaluate_policy(policy, rollout_env)
         return mean
 

@@ -10,7 +10,7 @@ from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings, find_imitation_checkpoint
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env, find_latest_dir
 from hmadrl.presetted_agents_env import PreSettedAgentsEnv
-from hmadrl.settings_utils import load_settings, import_user_code, get_save_dir
+from hmadrl.settings_utils import load_settings, import_user_code, get_save_dir, get_save_settings
 
 parser = argparse.ArgumentParser(description='Learn humanoid agent. Third step of HMADRL algorithm.')
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
@@ -37,7 +37,11 @@ rollout_env = GymnasiumToGym(rollout_env)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 rollout_env.render_mode = "human"
 
-checkpoint_path = find_imitation_checkpoint(settings)
+if isinstance(settings['save']['human_model'], dict):
+    checkpoint_path = settings['save']['human_model']["checkpoint"]
+else:
+    checkpoint_path = find_imitation_checkpoint(settings)
+
 inner_algo_cls = get_inner_algo_class_from_settings(settings["imitation"])
 assert inner_algo_cls is not None, "Specified inner_algo is not supported"
 

@@ -118,8 +118,10 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
                 th.load(str(checkpoint_path / "reward_net.pt")))
 
     def save(self):
-        model_path = str(self.path / str(self.timesteps) / "model.zip")
-        reward_net_path = str(self.path / str(self.timesteps) / "reward_net.pt")
+        current_save_dir = self.path / str(self.timesteps)
+        current_save_dir.mkdir(parents=True, exist_ok=True)
+        model_path = str(current_save_dir / "model.zip")
+        reward_net_path = str(current_save_dir / "reward_net.pt")
 
         th.save(self.reward_net, reward_net_path)
         self.inner_algo.save(model_path)
