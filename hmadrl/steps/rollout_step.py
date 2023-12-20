@@ -5,16 +5,17 @@ from marllib import marl
 import minari
 import argparse
 
+import hmadrl
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout, make_env
-from hmadrl.presetted_agents_env import PreSettedAgentsEnv
+from hmadrl.presetted_agents_env import SingleAgent, GymnasiumFixedHorizon
 from hmadrl.settings_utils import load_settings, import_user_code
 
 
 def run(settings):
+    hmadrl.marllib_utils.STEP_NAME = "rollout"
     user = import_user_code(settings["code"])
 
     env_settings = settings['env']
-    env_settings["step"] = "rollout"
     env = make_env(env_settings)
     env_instance, _ = env
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
@@ -28,8 +29,9 @@ def run(settings):
     human_agent = settings['rollout']['human_agent']
     policy_mapping.pop(human_agent, None)
 
-    rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
+    rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
     rollout_env.spec = gymnasium.envs.registration.EnvSpec(id=settings['env']['name'])
+    rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"]["episode_length"])
     rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])

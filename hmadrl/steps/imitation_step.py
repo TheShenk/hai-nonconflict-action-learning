@@ -12,16 +12,19 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from tqdm import tqdm
 
 from hagl.convert_space import GymnasiumToGym
+import hmadrl
+from hmadrl.MARLlibWrapper import GymnasiumFixedHorizon
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, init_as_multiagent, \
     create_imitation_models_from_settings, get_inner_algo_class_from_settings
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
-from hmadrl.presetted_agents_env import PreSettedAgentsEnv
+from hmadrl.presetted_agents_env import SingleAgent
 from hmadrl.settings_utils import load_settings, load_optuna_settings, \
     import_user_code, get_save_dir
 
 
 def run(settings):
+    hmadrl.marllib_utils.STEP_NAME = "imitation"
     import_user_code(settings["code"])
 
     trajectories = minari.MinariDataset(settings['save']['trajectory'])
@@ -30,7 +33,6 @@ def run(settings):
     rng = np.random.default_rng(0)
 
     env_settings = settings['env']
-    env_settings["step"] = "imitation"
     env = make_env(env_settings)
     env_instance, _ = env
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
@@ -44,7 +46,8 @@ def run(settings):
     human_policy = policy_mapping[human_agent]
     policy_mapping.pop(human_agent, None)
 
-    rollout_env = PreSettedAgentsEnv(env_instance, policy_mapping, human_agent)
+    rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
+    rollout_env = GymnasiumFixedHorizon(rollout_env, 150)
     rollout_env = GymnasiumToGym(rollout_env)
     rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 

@@ -212,10 +212,6 @@ def register_env(environment_name: str,
 
     def create_coop_marllib_fn(config: dict):
         env = create_fn(config)
-        env = TimeLimit(env, max_episode_len)
-        env = supersuit.pad_observations_v0(env)
-        env = supersuit.pad_action_space_v0(env)
-        env = supersuit.black_death_v3(env)
         return CoopMARLlibWrapper(env, max_episode_len, policy_mapping_info)
 
     ENV_REGISTRY[environment_name] = create_marllib_fn
@@ -244,3 +240,5 @@ def make_env(environment_settings: dict):
         env = ENV_REGISTRY[marllib_env_config["env"]](marllib_env_config["env_args"])
 
     return env, marllib_env_config
+
+STEP_NAME = "error"

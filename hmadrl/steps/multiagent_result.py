@@ -3,6 +3,7 @@ import pathlib
 
 from marllib import marl
 
+import hmadrl
 from hmadrl.marllib_utils import make_env, find_checkpoint
 from hmadrl.settings_utils import load_settings, load_tune_settings, import_user_code, get_save_settings
 
@@ -10,13 +11,14 @@ parser = argparse.ArgumentParser(description='Learning agent in environment. Fir
 parser.add_argument('--settings', default='hmadrl.yaml', type=str, help='path to settings file (default: hmadrl.yaml)')
 args = parser.parse_args()
 settings = load_settings(args.settings)
+
+hmadrl.marllib_utils.STEP_NAME = "multiagent"
 import_user_code(settings["code"])
 
 algo_settings = load_tune_settings(settings['multiagent']['algo']['args'])
 model_settings = load_tune_settings(settings['multiagent']['model'])
 
 env_settings = settings['env']
-env_settings["step"] = "multiagent-result"
 env = make_env(env_settings)
 algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
 model = marl.build_model(env, algo, model_settings)

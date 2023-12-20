@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import gymnasium
 import numpy as np
 import pettingzoo
@@ -22,7 +24,7 @@ class RolloutInfo:
         return action
 
 
-class PreSettedAgentsEnv(gymnasium.Env):
+class SingleAgent(gymnasium.Env):
 
     def step(self, action):
         total_action = {agent_id: self.presetted_policies[agent_id].predict(self.observation[agent_id])

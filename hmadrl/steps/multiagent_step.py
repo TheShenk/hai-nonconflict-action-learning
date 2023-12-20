@@ -1,11 +1,13 @@
 import argparse
 from marllib import marl
 
+import hmadrl
 from hmadrl.marllib_utils import make_env
 from hmadrl.settings_utils import load_settings, load_tune_settings, import_user_code, get_save_settings
 
 
 def run(settings):
+    hmadrl.marllib_utils.STEP_NAME = "multiagent"
     import_user_code(settings["code"])
 
     algo_settings = load_tune_settings(settings['multiagent']['algo']['args'])
@@ -14,7 +16,6 @@ def run(settings):
     local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
 
     env_settings = settings['env']
-    env_settings["step"] = "multiagent"
     env = make_env(env_settings)
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common", **algo_settings)
     model = marl.build_model(env, algo, model_settings)

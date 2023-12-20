@@ -7,6 +7,7 @@ import argparse
 from marllib.marl import POlICY_REGISTRY, recursive_dict_update
 from ray.rllib.policy.policy import PolicySpec
 
+import hmadrl
 from hmadrl.custom_policy import ImitationPolicy, HumanPolicy
 from hmadrl.imitation_registry import IMITATION_REGISTRY, RL_REGISTRY
 from hmadrl.imitation_utils import find_imitation_checkpoint
@@ -15,6 +16,7 @@ from hmadrl.settings_utils import load_settings, import_user_code, get_save_sett
 
 
 def run(settings):
+    hmadrl.marllib_utils.STEP_NAME = "retraining"
     user = import_user_code(settings["code"])
 
     local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
@@ -39,7 +41,6 @@ def run(settings):
                                                                                        inner_algo_cls)
 
     env_settings = settings['env']
-    env_settings["step"] = "retraining"
     env = make_env(env_settings)
     algo = marl._Algo(settings['multiagent']['algo']['name'])(hyperparam_source="common",
                                                               **multiagent_params['model']['custom_model_config'].get('algo_args', {}))
