@@ -170,5 +170,12 @@ def create_imitation_models_from_settings(settings, env, optuna_settings):
 def find_imitation_checkpoint(settings):
     imitation_algo = settings["imitation"]["algo"]["name"]
     imitation_inner_algo = settings["imitation"].get("inner_algo", {}).get("name", "none")
-    return find_latest_dir(pathlib.Path(get_save_dir(settings['save']['human_model'])),
-                           lambda obj: obj.is_dir() and obj.name.startswith(f'{imitation_algo}-{imitation_inner_algo}'))
+
+    save_dir = pathlib.Path(get_save_dir(settings['save']['human_model']))
+    last_launch_dir = find_latest_dir(save_dir,
+                                      lambda obj: obj.is_dir() and obj.name.startswith(f'{imitation_algo}-{imitation_inner_algo}'))
+    last_timestep_dir = find_latest_dir(last_launch_dir,
+                                        lambda obj: obj.is_dir() and obj.name.isdigit())
+    return last_timestep_dir
+
+

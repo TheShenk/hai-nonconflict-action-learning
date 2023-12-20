@@ -184,7 +184,10 @@ class MARLlibWrapper(MultiAgentEnv):
 
     @property
     def agents(self):
-        return self.env.agents if self.env.agents else self.env.possible_agents
+        try:
+            return self.env.agents
+        except AttributeError:
+            return self.env.possible_agents
 
 
 class CoopMARLlibWrapper(MARLlibWrapper):
