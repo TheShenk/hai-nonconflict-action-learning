@@ -7,7 +7,7 @@ import argparse
 
 import hmadrl
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout, make_env
-from hmadrl.presetted_agents_env import SingleAgent, GymnasiumFixedHorizon
+from hmadrl.presetted_agents_env import SingleAgent
 from hmadrl.settings_utils import load_settings, import_user_code
 
 
@@ -31,7 +31,6 @@ def run(settings):
 
     rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
     rollout_env.spec = gymnasium.envs.registration.EnvSpec(id=settings['env']['name'])
-    rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"]["episode_length"])
     rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])

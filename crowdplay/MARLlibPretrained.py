@@ -7,6 +7,7 @@ import numpy as np
 
 import torch
 from cloudpickle import cloudpickle
+from ray.rllib.agents import with_common_config
 from ray.rllib.policy.policy import PolicySpec
 
 
@@ -30,13 +31,14 @@ class MARLlibPretrained:
         observation_space = policies[policy_id].observation_space
         action_space = policies[policy_id].action_space
 
-        params["model"]["custom_model"] = "current_model"
-        params["multiagent"]["policies"] = policies
-        params["model"]["custom_model_config"]["space_obs"] = observation_space.original_space
-        params["model"]["custom_model_config"]["space_act"] = action_space
+        config = with_common_config(params)
+        config["model"]["custom_model"] = "current_model"
+        config["multiagent"]["policies"] = policies
+        config["model"]["custom_model_config"]["space_obs"] = observation_space.original_space
+        config["model"]["custom_model_config"]["space_act"] = action_space
 
         policy_state = worker["state"][policy_id]
-        self.policy = policies[policy_id].policy_class(obs_space=observation_space, action_space=action_space, config=params)
+        self.policy = policies[policy_id].policy_class(obs_space=observation_space, action_space=action_space, config=config)
         self.policy.set_state(policy_state)
 
     def compute_action(self, obs):

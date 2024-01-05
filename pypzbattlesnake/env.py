@@ -63,7 +63,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.teams_count = teams_count
         self.team_snakes_count = team_snakes_count
         self.snakes_count = teams_count * team_snakes_count
-        self.colors_count = 2*self.snakes_count + BASE_COLORS_COUNT
+        self.colors_count = 2 * self.snakes_count + BASE_COLORS_COUNT
 
         self.render_mode = render_mode
 
