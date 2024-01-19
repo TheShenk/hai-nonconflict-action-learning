@@ -2,14 +2,12 @@ import argparse
 import pathlib
 from time import time
 
-import gymnasium
 import minari
 import numpy as np
 import optuna
 from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
-from tqdm import tqdm
 
 from hagl.convert_space import GymnasiumToGym
 import hmadrl
@@ -70,15 +68,17 @@ def run(settings):
                                                                       optuna_settings['algo'].get('args', {}), path)
         total_timesteps = settings['imitation']['timesteps']
         checkpoint_freq = settings['imitation'].get("checkpoint_freq", total_timesteps)
-        trained_timesteps = 0
 
-        progress_bar = tqdm(total=total_timesteps)
-        while trained_timesteps < total_timesteps:
-            current_timesteps = min(checkpoint_freq, total_timesteps - trained_timesteps)
-            trainer.train(current_timesteps)
-            trained_timesteps += current_timesteps
-            progress_bar.update(current_timesteps)
-            trainer.save()
+        def callback(timestep):
+            if timestep % checkpoint_freq == 0:
+                trainer.save(timestep)
+
+        try:
+            trainer.train(total_timesteps, callback=callback)
+            trainer.save(total_timesteps)
+        except Exception as e:
+            print(e)
+            raise optuna.exceptions.TrialPruned()
 
         policy, _ = trainer.load(str(pathlib.Path(path) / str(total_timesteps)), 'cpu', type(inner_algo))
         mean, std = evaluate_policy(policy, rollout_env)

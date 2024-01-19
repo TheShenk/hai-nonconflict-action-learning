@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from typing import Tuple, SupportsFloat, Any
 
 import gym
@@ -22,6 +23,11 @@ class TimeLimit(pettingzoo.utils.BaseParallelWrapper):
         super().__init__(env)
         self.max_episode_steps = max_episode_steps
         self.elapsed_steps = None
+
+        try:
+            self.render_mode = env.render_mode
+        except AttributeError:
+            warnings.warn(f"The base environment `{env}` does not have a `render_mode` defined.")
 
     def reset(self, seed: int | None = None, options: dict | None = None):
         res = super().reset(seed, options)
@@ -106,6 +112,11 @@ class Flatten(pettingzoo.utils.BaseParallelWrapper):
     def __init__(self, env):
         super().__init__(env)
 
+        try:
+            self.render_mode = env.render_mode
+        except AttributeError:
+            warnings.warn(f"The base environment `{env}` does not have a `render_mode` defined.")
+
     @functools.lru_cache
     def observation_space(self, agent):
         return gymnasium.spaces.flatten_space(super().observation_space(agent))
@@ -151,6 +162,10 @@ class MARLlibWrapper(MultiAgentEnv):
 
         self.max_episode_len = max_episode_len
         self.policy_mapping_info = policy_mapping_info
+        try:
+            self.render_mode = env.render_mode
+        except AttributeError:
+            warnings.warn(f"The base environment `{env}` does not have a `render_mode` defined.")
 
     def reset(self) -> MultiAgentDict:
         observation, info = self.env.reset()

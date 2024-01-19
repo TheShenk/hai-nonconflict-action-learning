@@ -1,7 +1,6 @@
 import pathlib
 from typing import Dict, Type
 
-import stable_baselines3.common.off_policy_algorithm
 import torch as th
 
 from imitation.algorithms.adversarial.airl import AIRL
@@ -34,11 +33,10 @@ class ImitationTrainer:
     def load(path, device, inner_algo):
         pass
 
-    def save(self):
+    def save(self, timesteps):
         pass
 
-    def train(self, timesteps):
-        self.timesteps += timesteps
+    def train(self, timesteps, callback):
         pass
 
 
@@ -60,8 +58,8 @@ class BaseImitationTrainer(ImitationTrainer):
         return (inner_algo.load(path=str(checkpoint_path / "model.zip"), device=device),
                 th.load(str(checkpoint_path / "reward_net.pt")))
 
-    def save(self):
-        current_save_dir = self.path / str(self.timesteps)
+    def save(self, timesteps):
+        current_save_dir = self.path / str(timesteps)
         current_save_dir.mkdir(parents=True, exist_ok=True)
         model_path = str(current_save_dir / "model.zip")
         reward_net_path = str(current_save_dir / "reward_net.pt")
@@ -69,9 +67,9 @@ class BaseImitationTrainer(ImitationTrainer):
         th.save(self.reward_net, reward_net_path)
         self.inner_algo.save(model_path)
 
-    def train(self, timesteps):
-        super().train(timesteps)
-        self.trainer.train(timesteps)
+    def train(self, timesteps, callback):
+        super().train(timesteps, callback)
+        self.trainer.train(timesteps, callback)
 
 
 class BCTrainer(ImitationTrainer):
@@ -92,15 +90,27 @@ class BCTrainer(ImitationTrainer):
         checkpoint_path = pathlib.Path(checkpoint_path)
         return bc.reconstruct_policy(str(checkpoint_path / "model.zip"), device), None
 
-    def save(self):
-        current_save_dir = self.path / str(self.timesteps)
+    def save(self, timesteps):
+        current_save_dir = self.path / str(timesteps)
         current_save_dir.mkdir(parents=True, exist_ok=True)
         model_path = str(current_save_dir / "model.zip")
         util.save_policy(self.trainer.policy, model_path)
 
-    def train(self, epochs):
-        super().train(epochs)
-        self.trainer.train(n_epochs=epochs)
+    def train(self, batches, callback):
+        super().train(batches, callback)
+
+        class OnBatchEndCallback:
+            counter: int
+
+            def __init__(self, callback):
+                self.counter = 0
+                self.callback = callback
+
+            def __call__(self, *args, **kwargs):
+                self.counter += 1
+                self.callback(self.counter)
+
+        self.trainer.train(n_batches=batches, on_batch_end=OnBatchEndCallback(callback))
 
 
 class GenerativeAdversarialImitationTrainer(ImitationTrainer):
@@ -121,8 +131,8 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
         return (inner_algo.load(path=str(checkpoint_path / "model.zip"), device=device),
                 th.load(str(checkpoint_path / "reward_net.pt")))
 
-    def save(self):
-        current_save_dir = self.path / str(self.timesteps)
+    def save(self, timesteps):
+        current_save_dir = self.path / str(timesteps)
         current_save_dir.mkdir(parents=True, exist_ok=True)
         model_path = str(current_save_dir / "model.zip")
         reward_net_path = str(current_save_dir / "reward_net.pt")
@@ -130,9 +140,9 @@ class GenerativeAdversarialImitationTrainer(ImitationTrainer):
         th.save(self.reward_net, reward_net_path)
         self.inner_algo.save(model_path)
 
-    def train(self, timesteps):
-        super().train(timesteps)
-        self.trainer.train(timesteps)
+    def train(self, timesteps, callback):
+        super().train(timesteps, callback)
+        self.trainer.train(timesteps, callback=callback)
 
 
 class GAILTrainer(GenerativeAdversarialImitationTrainer):
@@ -152,9 +162,10 @@ class DensityTrainer(BaseImitationTrainer):
     def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
         super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
 
-    def train(self, timesteps):
+    def train(self, timesteps, callback):
         for i in range(timesteps):
             self.trainer.train()
+            callback(timesteps)
         self.timesteps += timesteps
 
 
@@ -185,15 +196,15 @@ class SQILTrainer(ImitationTrainer):
         return inner_algo.load(path=str(checkpoint_path / "model.zip"),
                                device=device), None
 
-    def save(self):
-        current_save_dir = self.path / str(self.timesteps)
+    def save(self, timesteps):
+        current_save_dir = self.path / str(timesteps)
         current_save_dir.mkdir(parents=True, exist_ok=True)
         model_path = str(current_save_dir / "model.zip")
         self.trainer.rl_algo.save(model_path)
 
-    def train(self, timesteps):
-        super().train(timesteps)
-        self.trainer.train(total_timesteps=timesteps)
+    def train(self, timesteps, callback):
+        super().train(timesteps, callback)
+        self.trainer.train(total_timesteps=timesteps) #TODO: callback
 
 
 IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {

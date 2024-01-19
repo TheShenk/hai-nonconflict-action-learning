@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import gymnasium
 import numpy as np
 import pettingzoo
@@ -52,6 +54,11 @@ class SingleAgent(gymnasium.Env):
         self.controlled_agent_id = controlled_agent_id
         self.observation_space = shimmy.openai_gym_compatibility._convert_space(self.env.observation_space['obs'])
         self.action_space = shimmy.openai_gym_compatibility._convert_space(self.env.action_space)
+
+        try:
+            self.render_mode = env.render_mode
+        except AttributeError:
+            warnings.warn(f"The base environment `{env}` does not have a `render_mode` defined.")
 
     def close(self):
         self.env.close()
