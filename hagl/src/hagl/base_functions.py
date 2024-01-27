@@ -3,8 +3,8 @@ import enum
 
 import gymnasium
 
-import hagl
-from hagl import HAGLType
+from .base_types import HAGLType
+from .template import DEFAULT_TEMPLATE_VALUES
 
 
 def is_base_hagl_type(val):
@@ -15,16 +15,20 @@ def is_base_hagl_type(val):
 
 
 def try_as_syntax_shugar(val):
+    from .composition_types import Array
+    from .enum_type import Enum
+    from .python_types import Bool, Float
+
     if isinstance(val, list):
         assert len(val) == 2, "In HAGL types list can be used only for creating Array type. First element - type, " \
                               "second - number of elements of the specified type"
-        return hagl.composition_types.Array(val[0], val[1])
+        return Array(val[0], val[1])
     elif isinstance(val, enum.EnumMeta):
-        return hagl.enum_type.Enum(val)
+        return Enum(val)
     elif val == float:
-        return hagl.python_types.Float
+        return Float
     elif val == bool:
-        return hagl.python_types.Bool
+        return Bool
     return val
 
 
@@ -65,7 +69,7 @@ def compile_type(hagl_type, template_values):
 
 
 def compile_space(space, template_values):
-    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+    hagl_template_values = DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
 
     compiled_space = compile_type(space, hagl_template_values)
@@ -106,12 +110,12 @@ def _deconstruct(hagl_type, hagl_value, template_values):
 
 
 def construct(hagl_type, gym_dict_value, template_values):
-    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+    hagl_template_values = DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
     return _construct(hagl_type, gym_dict_value, hagl_template_values)
 
 
 def deconstruct(hagl_type, hagl_value, template_values):
-    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
+    hagl_template_values = DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
     return _deconstruct(hagl_type, hagl_value, hagl_template_values)

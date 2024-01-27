@@ -1,9 +1,10 @@
 import gymnasium
 import numpy as np
 
-import hagl
-from hagl import HAGLType, get_template
-from hagl.base_functions import compile_type
+from .base_types import HAGLType
+from .base_functions import compile_type, construct, deconstruct
+from .template import get_template
+from .exceptions import LimitViolation
 
 
 class Limit(HAGLType):
@@ -53,7 +54,7 @@ class Limit(HAGLType):
             else:
                 limit_correct = (self.t_low <= gym_value) and (gym_value < self.t_high)
             if not limit_correct:
-                raise hagl.exceptions.LimitViolation(
+                raise LimitViolation(
                     f"Range limit violation. {gym_value} is out of [{self.t_low}, {self.t_high})")
 
     def _equal_limit_check(self, gym_value):
@@ -63,13 +64,13 @@ class Limit(HAGLType):
             else:
                 limit_correct = (gym_value == self.t_equal)
             if not limit_correct:
-                raise hagl.exceptions.LimitViolation(f"Equal limit violation. {gym_value} != {self.t_equal}")
+                raise LimitViolation(f"Equal limit violation. {gym_value} != {self.t_equal}")
 
     def _func_limit_check(self, gym_value):
         if self.func_limit:
             limit_correct = self.t_func(gym_value)
             if not limit_correct:
-                raise hagl.exceptions.LimitViolation(f"Functional limit violation for {gym_value}")
+                raise LimitViolation(f"Functional limit violation for {gym_value}")
 
     def construct(self, gym_value, template_values):
         t_inner_type = get_template(self.inner_type, template_values)
@@ -78,8 +79,8 @@ class Limit(HAGLType):
         self._equal_limit_check(gym_value)
         self._func_limit_check(gym_value)
 
-        return hagl.construct(t_inner_type, gym_value, template_values)
+        return construct(t_inner_type, gym_value, template_values)
 
     def deconstruct(self, hagl_value, template_values):
         t_inner_type = get_template(self.inner_type, template_values)
-        return hagl.deconstruct(t_inner_type, hagl_value, template_values)
+        return deconstruct(t_inner_type, hagl_value, template_values)

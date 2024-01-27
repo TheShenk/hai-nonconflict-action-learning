@@ -3,10 +3,10 @@ import math
 import gymnasium
 import numpy as np
 
-from hagl.base_types import HAGLType
-from hagl.exceptions import PhysicException
-from hagl.template import get_template, Template, DIMENSIONS_TEMPLATE_NAME, ANGLE_UNIT_TEMPLATE_NAME, AngleUnit
-from hagl.python_types import Float
+from .base_types import HAGLType
+from .exceptions import PhysicException
+from .template import get_template, Template, DIMENSIONS_TEMPLATE_NAME, ANGLE_UNIT_TEMPLATE_NAME, AngleUnit
+from .python_types import Float
 
 COORD_NAMES = ['x', 'y', 'z', 'w']
 

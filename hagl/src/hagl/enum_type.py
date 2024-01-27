@@ -2,9 +2,9 @@ import enum
 
 import gymnasium
 
-import hagl
-from hagl import HAGLType
-from hagl.template import EnumGymConversion, ENUM_GYM_CONVERSION_TEMPLATE_NAME, get_template, Template
+from .base_types import HAGLType
+from .template import EnumGymConversion, ENUM_GYM_CONVERSION_TEMPLATE_NAME, get_template, Template
+from .exceptions import EnumException
 
 
 class Enum(HAGLType):
@@ -21,7 +21,7 @@ class Enum(HAGLType):
         elif conversion_type == EnumGymConversion.Box:
             return gymnasium.spaces.Box(low=0.0, high=len(self.python_enum)-1)
         else:
-            raise hagl.exceptions.EnumException(f"Unknown enum-gym conversion type: {conversion_type}")
+            raise EnumException(f"Unknown enum-gym conversion type: {conversion_type}")
 
     def construct(self, gym_value, template_values):
         value = int(gym_value + 1)

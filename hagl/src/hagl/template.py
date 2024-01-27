@@ -1,7 +1,7 @@
 import enum
 
-import hagl
-from hagl.base_types import HAGLType
+from .base_types import HAGLType
+from .exceptions import TemplateException
 
 DIMENSIONS_TEMPLATE_NAME = "dimensions"
 
@@ -40,7 +40,7 @@ def get_template(template_value, template_dict: dict):
         if template_name in template_dict:
             return template_dict[template_name]
         else:
-            raise hagl.exceptions.TemplateException(f"Can't find template parameter with name {template_name}")
+            raise TemplateException(f"Can't find template parameter with name {template_name}")
     return template_value
 
 

@@ -1,5 +1,5 @@
-from hagl import HAGLType
 from gymnasium.spaces.utils import unflatten, flatten, flatten_space
+from .base_types import HAGLType
 
 
 class GymnasiumStraight:

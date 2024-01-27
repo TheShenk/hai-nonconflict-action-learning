@@ -1,8 +1,8 @@
 import gymnasium.spaces
 import numpy as np
 
-from hagl.base_types import HAGLType
-from hagl.template import get_template, Template, BOOL_GYM_CONVERSION_TEMPLATE_NAME, BoolGymConversion
+from .base_types import HAGLType
+from .template import get_template, Template, BOOL_GYM_CONVERSION_TEMPLATE_NAME, BoolGymConversion
 
 
 class Float(HAGLType):
