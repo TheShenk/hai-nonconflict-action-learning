@@ -67,7 +67,6 @@ class Vector(HAGLType):
         value.array = self.array / other_array
         return value
 
-
     def __setattr__(self, key, value):
         if key in COORD_NAMES:
             key_index = COORD_NAMES.index(key)
@@ -85,12 +84,14 @@ class Vector(HAGLType):
     def norm(self):
         return np.linalg.norm(self.array)
 
+
 class Velocity(Vector):
     pass
 
 
 class Position(Vector):
     pass
+
 
 class Angle(HAGLType):
     @staticmethod
@@ -108,6 +109,7 @@ class Angle(HAGLType):
     @staticmethod
     def deconstruct(hagl_value, template_values):
         return np.array([hagl_value])
+
 
 class AngleVelocity(Float):
     pass

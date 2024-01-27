@@ -6,6 +6,7 @@ from hagl.physic_types import Vector
 from hagl.template import get_template
 from hagl.exceptions import ProxyException
 
+
 class Proxy(HAGLType):
 
     def __init__(self, target_type, proxy):
@@ -35,13 +36,16 @@ class Proxy(HAGLType):
             result[field_name] = deconstructed_value
         return result
 
+
 def proxy_vec2d(vec2d):
     vec = Vector()
     vec.array = [vec2d.x, vec2d.y]
     return vec
 
+
 def proxy_asis(something):
     return something
+
 
 Box2DProxy = dict(
     position=proxy_vec2d,
@@ -52,15 +56,18 @@ Box2DProxy = dict(
     linearVelocity=proxy_vec2d
 )
 
+
 class HAGLBox2D(Proxy):
 
     def __init__(self, target_type):
         super().__init__(target_type, Box2DProxy)
 
+
 PyMunkProxy = dict(
     position=proxy_vec2d,
     velocity=proxy_vec2d
 )
+
 
 class HAGLPyMunk(Proxy):
 

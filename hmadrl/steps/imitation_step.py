@@ -9,7 +9,6 @@ from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from hagl.convert_space import GymnasiumToGym
 import hmadrl
 from hmadrl.MARLlibWrapper import GymnasiumFixedHorizon
 from hmadrl.imitation_registry import IMITATION_REGISTRY
@@ -44,10 +43,13 @@ def run(settings):
     human_policy = policy_mapping[human_agent]
     policy_mapping.pop(human_agent, None)
 
-    rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
-    rollout_env = GymnasiumFixedHorizon(rollout_env, 150)
-    rollout_env = GymnasiumToGym(rollout_env)
-    rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
+    def make_rollout_env():
+        rollout_env, _ = make_env(env_settings)
+        rollout_env = SingleAgent(rollout_env, policy_mapping, human_agent)
+        rollout_env = GymnasiumFixedHorizon(rollout_env, 300)
+        return rollout_env
+
+    rollout_env = make_vec_env(make_rollout_env, n_envs=4)
 
     def objective(trial: optuna.Trial):
 

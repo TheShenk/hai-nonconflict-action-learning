@@ -5,7 +5,6 @@ from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from hagl.convert_space import GymnasiumToGym
 import hmadrl
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings, find_imitation_checkpoint
@@ -35,7 +34,6 @@ human_agent = settings['rollout']['human_agent']
 policy_mapping.pop(human_agent, None)
 
 rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
-rollout_env = GymnasiumToGym(rollout_env)
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 rollout_env.render_mode = "human"
 

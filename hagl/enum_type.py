@@ -1,7 +1,6 @@
 import enum
 
 import gymnasium
-import numpy as np
 
 import hagl
 from hagl import HAGLType

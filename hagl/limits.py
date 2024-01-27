@@ -33,9 +33,9 @@ class Limit(HAGLType):
         self.t_equal = get_template(self.equal, template_values)
         self.t_func = get_template(self.func, template_values)
 
-        self.range_limit = (not self.t_low is None) and (not self.t_high is None)
-        self.equal_limit = not self.t_equal is None
-        self.func_limit = not self.t_func is None
+        self.range_limit = (self.t_low is not None) and (self.t_high is not None)
+        self.equal_limit = self.t_equal is not None
+        self.func_limit = self.t_func is not None
 
         inner_gym_type = compile_type(t_inner_type, template_values)
 

@@ -10,7 +10,7 @@ class BenchmarkAECHAGLEnv:
         self.hagl_observation_space = hagl_observation_space
         self.hagl_action_space = hagl_action_space
 
-        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, {})
+        gymnasium_observation_space = hagl.compile_space(hagl_observation_space, {})
         gymnasium_observation = gymnasium_observation_space.sample()
         self.observation = hagl.construct(hagl_observation_space, gymnasium_observation, {})
 

@@ -21,6 +21,7 @@ DEFAULT_TEMPLATE_VALUES = {
     ANGLE_UNIT_TEMPLATE_NAME: AngleUnit.Radian
 }
 
+
 class Template(HAGLType):
 
     def __init__(self, template_name):
@@ -32,6 +33,7 @@ class Template(HAGLType):
     def gym_type(self, template_values):
         return get_template(self, template_values)
 
+
 def get_template(template_value, template_dict: dict):
     if isinstance(template_value, Template):
         template_name = template_value.name()
@@ -40,5 +42,6 @@ def get_template(template_value, template_dict: dict):
         else:
             raise hagl.exceptions.TemplateException(f"Can't find template parameter with name {template_name}")
     return template_value
+
 
 T = Template

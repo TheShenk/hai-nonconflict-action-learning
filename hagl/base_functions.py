@@ -8,7 +8,7 @@ from hagl import HAGLType
 
 
 def is_base_hagl_type(val):
-    if type(val) == type:
+    if type(val) is type:
         return issubclass(val, HAGLType)
     else:
         return issubclass(type(val), HAGLType)
@@ -37,7 +37,6 @@ def allowed_var(name, value):
 
 
 def get_hagl_vars(hagl_type):
-
     type_vars = {}
 
     # [:-1] - берем массив без Object
@@ -51,7 +50,6 @@ def get_hagl_vars(hagl_type):
 
 
 def compile_type(hagl_type, template_values):
-
     hagl_type = try_as_syntax_shugar(hagl_type)
     if is_base_hagl_type(hagl_type):
         return hagl_type.gym_type(template_values)
@@ -66,18 +64,7 @@ def compile_type(hagl_type, template_values):
     return compiled_type
 
 
-def compile(observation, action, template_values):
-
-    hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
-    hagl_template_values.update(template_values)
-
-    compiled_observation = compile_type(observation, hagl_template_values)
-    compiled_action = compile_type(action, hagl_template_values)
-
-    return compiled_observation, compiled_action
-
-
-def compile_one(space, template_values):
+def compile_space(space, template_values):
     hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
 
@@ -87,7 +74,6 @@ def compile_one(space, template_values):
 
 
 def _construct(hagl_type, gym_dict_value, template_values):
-
     hagl_type = try_as_syntax_shugar(hagl_type)
     if is_base_hagl_type(hagl_type):
         return hagl_type.construct(gym_dict_value, template_values)
@@ -104,7 +90,6 @@ def _construct(hagl_type, gym_dict_value, template_values):
 
 
 def _deconstruct(hagl_type, hagl_value, template_values):
-
     hagl_type = try_as_syntax_shugar(hagl_type)
     if is_base_hagl_type(hagl_type):
         return hagl_type.deconstruct(hagl_value, template_values)
@@ -119,15 +104,14 @@ def _deconstruct(hagl_type, hagl_value, template_values):
 
     return deconstructed_value
 
-def construct(hagl_type, gym_dict_value, template_values):
 
+def construct(hagl_type, gym_dict_value, template_values):
     hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
     return _construct(hagl_type, gym_dict_value, hagl_template_values)
 
 
 def deconstruct(hagl_type, hagl_value, template_values):
-
     hagl_template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
     hagl_template_values.update(template_values)
     return _deconstruct(hagl_type, hagl_value, hagl_template_values)

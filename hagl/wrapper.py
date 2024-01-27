@@ -12,7 +12,6 @@ import pettingzoo
 from numpy.typing import NDArray
 
 import hagl
-from hagl.convert_space import convert_space
 
 
 @unflatten.register(Discrete)
@@ -36,8 +35,9 @@ class HAGLWrapper(gymnasium.Env):
         self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
         self.template_values.update(template_values)
 
-        self.gymnasium_action_space, self.gymnasium_observation_space \
-            = hagl.compile(self.hagl_action_space, self.hagl_observation_space, template_values)
+        self.gymnasium_action_space = hagl.compile_space(self.hagl_action_space, template_values)
+        self.gymnasium_observation_space = hagl.compile_space(self.hagl_observation_space, template_values)
+
         self.action_space = gymnasium.spaces.flatten_space(self.gymnasium_action_space)
         self.observation_space = gymnasium.spaces.flatten_space(self.gymnasium_observation_space)
 
@@ -119,13 +119,13 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
 
     def _process_observation(self, agent_id, hagl_observation):
         hagl_observation_space = self.env.observation_space(agent_id)
-        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
+        gymnasium_observation_space = hagl.compile_space(hagl_observation_space, self.template_values)
         gymnasium_observation = hagl.deconstruct(hagl_observation_space, hagl_observation, self.template_values)
         return gymnasium.spaces.flatten(gymnasium_observation_space, gymnasium_observation)
 
     def _process_action(self, agent_id, action):
         hagl_action_space = self.env.action_space(agent_id)
-        gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
+        gymnasium_action_space = hagl.compile_space(hagl_action_space, self.template_values)
         gymnasium_action = gymnasium.spaces.unflatten(gymnasium_action_space, action)
         return hagl.construct(hagl_action_space, gymnasium_action, self.template_values)
 
@@ -153,13 +153,13 @@ class HAGLParallelWrapper(pettingzoo.ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         hagl_action_space = self.env.action_space(agent)
-        gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
+        gymnasium_action_space = hagl.compile_space(hagl_action_space, self.template_values)
         return gymnasium.spaces.flatten_space(gymnasium_action_space)
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         hagl_observation_space = self.env.observation_space(agent)
-        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
+        gymnasium_observation_space = hagl.compile_space(hagl_observation_space, self.template_values)
         return gymnasium.spaces.flatten_space(gymnasium_observation_space)
 
 
@@ -220,13 +220,13 @@ class HAGLAECWrapper(pettingzoo.AECEnv):
     @functools.lru_cache(maxsize=None)
     def gymnasium_action_space(self, agent):
         hagl_action_space = self.env.action_space(agent)
-        gymnasium_action_space = hagl.compile_one(hagl_action_space, self.template_values)
+        gymnasium_action_space = hagl.compile_space(hagl_action_space, self.template_values)
         return gymnasium_action_space
 
     @functools.lru_cache(maxsize=None)
     def gymnasium_observation_space(self, agent):
         hagl_observation_space = self.env.observation_space(agent)
-        gymnasium_observation_space = hagl.compile_one(hagl_observation_space, self.template_values)
+        gymnasium_observation_space = hagl.compile_space(hagl_observation_space, self.template_values)
         return gymnasium_observation_space
 
     def close(self):
@@ -244,8 +244,9 @@ class HAGLModel:
         self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
         self.template_values.update(template_values)
 
-        self.gymnasium_action_space, self.gymnasium_observation_space \
-            = hagl.compile(self.hagl_action_space, self.hagl_observation_space, template_values)
+        self.gymnasium_action_space = hagl.compile_space(self.hagl_action_space, template_values)
+        self.gymnasium_observation_space = hagl.compile_space(self.hagl_observation_space, template_values)
+
         self.action_space = gymnasium.spaces.flatten_space(self.gymnasium_action_space)
         self.observation_space = gymnasium.spaces.flatten_space(self.gymnasium_observation_space)
 
@@ -271,8 +272,9 @@ class HAGLPolicy:
         self.template_values = hagl.template.DEFAULT_TEMPLATE_VALUES.copy()
         self.template_values.update(template_values)
 
-        self.gymnasium_action_space, self.gymnasium_observation_space \
-            = hagl.compile(self.hagl_action_space, self.hagl_observation_space, template_values)
+        self.gymnasium_action_space = hagl.compile_space(self.hagl_action_space, template_values)
+        self.gymnasium_observation_space = hagl.compile_space(self.hagl_observation_space, template_values)
+
         self.action_space = gymnasium.spaces.flatten_space(self.gymnasium_action_space)
         self.observation_space = gymnasium.spaces.flatten_space(self.gymnasium_observation_space)
 

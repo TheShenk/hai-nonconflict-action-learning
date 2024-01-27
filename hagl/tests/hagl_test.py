@@ -2,7 +2,6 @@ import enum
 
 import gymnasium.spaces.utils
 import numpy as np
-import pytest
 
 import hagl
 
@@ -17,7 +16,7 @@ def test_enum():
     class Space:
         field = TestEnum
 
-    gymnasium_dict_space = hagl.compile_one(Space, {})
+    gymnasium_dict_space = hagl.compile_space(Space, {})
     gymnasium_space = gymnasium.spaces.utils.flatten_space(gymnasium_dict_space)
     assert isinstance(gymnasium_space, gymnasium.spaces.Box)
     assert gymnasium_space.shape == (3,)

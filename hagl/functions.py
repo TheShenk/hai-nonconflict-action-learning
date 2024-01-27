@@ -26,6 +26,7 @@ class Function(HAGLType):
 
         return hagl.deconstruct(t_inner_type, t_deconstruct_func(hagl_value), template_values)
 
+
 class Shift(Function):
 
     def __init__(self, inner_type, by):
