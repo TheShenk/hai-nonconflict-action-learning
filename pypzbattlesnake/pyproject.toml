@@ -1,0 +1,33 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "pypzbattlesnake"
+authors = [{name = "TheShenk"}]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+dynamic = ["version", "description"]
+dependencies = [
+    "pettingzoo",
+    "gymnasium",
+    "numpy"
+]
+
+[project.urls]
+Homepage = "https://github.com/TheShenk/hai-nonconflict-action-learning"
+Issues = "https://github.com/TheShenk/hai-nonconflict-action-learning/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest >=2.7.3",
+    "pytest-cov",
+]
+render = [
+    "pygame"
+]
