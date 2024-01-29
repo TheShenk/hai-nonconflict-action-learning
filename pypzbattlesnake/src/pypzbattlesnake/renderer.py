@@ -27,10 +27,11 @@ ROTATE_BY_DIRECTION = {
 
 def random_color():
     h = np.random.default_rng().random()
-    return tuple(map(lambda x: int(255*x), colorsys.hls_to_rgb(h, 0.4, 0.8)))
+    return tuple(map(lambda x: int(255 * x), colorsys.hls_to_rgb(h, 0.4, 0.8)))
 
 
-PALITE = [(0, 104, 139), (0, 104, 139), (159, 0, 255), (159, 0, 255), (212, 137, 28), (212, 137, 28), (0, 155, 92), (0, 155, 92)]
+PALITE = [(0, 104, 139), (0, 104, 139), (159, 0, 255), (159, 0, 255), (212, 137, 28), (212, 137, 28), (0, 155, 92),
+          (0, 155, 92)]
 
 
 def get_shift(cell_a, cell_b):
@@ -54,9 +55,8 @@ class BattleSnakeRenderer:
         self.screen = pygame.display.set_mode((size_x, size_y))
 
         self.field: list[list[pygame.Rect]] = []
-        self.snake_colors = {snake.color: random_color()
-        if snake.color-BASE_COLORS_COUNT > len(PALITE) else PALITE[snake.color-BASE_COLORS_COUNT]
-        for _, snake in self.env.snakes.items()}
+        self.snake_colors = {snake.color: random_color() if snake.color - BASE_COLORS_COUNT > len(PALITE)
+                             else PALITE[snake.color - BASE_COLORS_COUNT] for _, snake in self.env.snakes.items()}
 
         rect_x = GRID_PADDING
         for x in range(self.env.size[0]):
@@ -68,13 +68,13 @@ class BattleSnakeRenderer:
                 rect_y += RECT_SIZE + RECT_PADDING
             rect_x += RECT_SIZE + RECT_PADDING
 
-        self.head_img = pygame.image.load(file_path / 'resources' / 'head.svg').convert_alpha()
+        self.head_img = pygame.image.load(file_path / '..' / '..' / 'resources' / 'head.svg').convert_alpha()
         self.head_img = pygame.transform.scale(self.head_img, (RECT_SIZE, RECT_SIZE))
         for _, snake in self.env.snakes.items():
             snake.render_head = self.head_img.copy()
             snake.render_head.fill(self.snake_colors[snake.color], special_flags=pygame.BLEND_RGB_MAX)
 
-        self.tail_img = pygame.image.load(file_path / 'resources' / 'tail.svg').convert_alpha()
+        self.tail_img = pygame.image.load(file_path / '..' / '..' / 'resources' / 'tail.svg').convert_alpha()
         self.tail_img = pygame.transform.scale(self.tail_img, (RECT_SIZE, RECT_SIZE))
         for _, snake in self.env.snakes.items():
             snake.render_tail = self.tail_img.copy()

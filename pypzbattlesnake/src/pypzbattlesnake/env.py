@@ -10,8 +10,8 @@ from pettingzoo.utils.env import AgentID
 from .common import Action, SHIFT_BY_ACTION, OPPOSITE_ACTION, BASE_COLORS_COUNT, FOOD_COLOR, EMPTY_COLOR
 from .renderer import BattleSnakeRenderer
 
-# ActionSpace = gymnasium.spaces.Box(0, 1, (5,))
 ActionSpace = gymnasium.spaces.Discrete(5)
+
 
 class Snake:
 
@@ -105,7 +105,8 @@ class BattleSnake(pettingzoo.ParallelEnv):
         for i in range(0, place_cells_count):
             current_pos = (current_pos[0] + directions[current_direction][0],
                            current_pos[1] + directions[current_direction][1])
-            if current_pos in {(inner_square_size[0] - 1, 0), (0, inner_square_size[1] - 1), (inner_square_size[0] - 1, inner_square_size[1] - 1)}:
+            if current_pos in {(inner_square_size[0] - 1, 0), (0, inner_square_size[1] - 1),
+                               (inner_square_size[0] - 1, inner_square_size[1] - 1)}:
                 current_direction += 1
             possible_pos.append(current_pos)
 
@@ -320,7 +321,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent: AgentID):
-        dim = math.prod(self.size) # + self.snakes_count
+        dim = math.prod(self.size)
         dim = np.full((dim,), BASE_COLORS_COUNT + 2*self.snakes_count)
         return gymnasium.spaces.MultiDiscrete(dim)
 
