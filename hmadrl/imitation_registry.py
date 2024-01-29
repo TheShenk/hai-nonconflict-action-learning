@@ -12,8 +12,8 @@ from imitation.util.logger import configure
 from imitation.util import util
 
 from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3 import PPO, SAC, A2C, DDPG, DQN, TD3
-from sb3_contrib import TRPO, ARS, QRDQN, TQC
+from stable_baselines3 import PPO, A2C, DDPG, DQN, TD3
+from sb3_contrib import TRPO, QRDQN, TQC
 
 
 class ImitationTrainer:
@@ -204,7 +204,7 @@ class SQILTrainer(ImitationTrainer):
 
     def train(self, timesteps, callback):
         super().train(timesteps, callback)
-        self.trainer.train(total_timesteps=timesteps) #TODO: callback
+        self.trainer.train(total_timesteps=timesteps)  # TODO: callback
 
 
 IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
@@ -213,8 +213,8 @@ IMITATION_REGISTRY: Dict[str, Type[ImitationTrainer]] = {
     "airl": AIRLTrainer,
     "density": DensityTrainer,
     "sqil": SQILTrainer
-    # TODO: dagger (требует слияния 2 и 3 шага),
-    #  MCE-IRL (поддерживает только TabularPOMDP среды из библиотеки seals)
+    # dagger # Need to combine step-2 and step-3
+    # MCE-IRL # Support only TabularPOMDP environments from seals library
 }
 
 RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
