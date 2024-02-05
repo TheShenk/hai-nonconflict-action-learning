@@ -9,7 +9,7 @@ from hmadrl.steps.retraining_step import run as run_step4
 
 
 MULTIAGENT_ALGORITHMS = ['itrpo', 'matrpo', 'hatrpo', 'ippo', 'mappo', 'vdppo', 'happo', 'ia2c', 'maa2c', 'coma',
-                         'vda2c']
+                         'vda2c', 'iddpg']
 
 IMITATION_ALGORITHMS = list(IMITATION_REGISTRY.keys())
 RL_ALGORITHMS = list(RL_REGISTRY.keys())
@@ -71,7 +71,7 @@ def create_settings(multiagent_algo, imitation_algo, imitation_inner_algo, discr
             "human_model": f"test_humanoid_{discrete_name}",
             "retraining_model": f"test_retraining_model_{discrete_name}"
         },
-        "code": "../../example/football-discrete.py" if discrete else "../../example/football.py"
+        "code": "../example/football-discrete.py" if discrete else "../example/football.py"
     }
 
 
