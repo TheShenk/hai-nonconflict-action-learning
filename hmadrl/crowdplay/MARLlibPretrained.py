@@ -13,7 +13,7 @@ from ray.rllib.policy.policy import PolicySpec
 
 class MARLlibPretrained:
 
-    def __init__(self, checkpoint_path, policy_id):
+    def __init__(self, checkpoint_path, policy_id, first_action = None):
 
         with open(checkpoint_path, 'rb') as checkpoint_file:
             checkpoint = cloudpickle.load(checkpoint_file)
@@ -40,6 +40,10 @@ class MARLlibPretrained:
         policy_state = worker["state"][policy_id]
         self.policy = policies[policy_id].policy_class(obs_space=observation_space, action_space=action_space, config=config)
         self.policy.set_state(policy_state)
+        self.first_action = first_action
 
     def compute_action(self, obs):
+        if self.first_action is not None:
+            action, self.first_action = self.first_action, None
+            return action
         return self.policy.compute_single_action(obs)[0]

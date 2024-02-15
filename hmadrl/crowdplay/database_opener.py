@@ -37,15 +37,15 @@ class RecordEnv(gymnasium.Env):
         self.action_space = gymnasium.spaces.Box(-np.inf, np.inf, shape=action.shape, dtype=action.dtype)
 
     def reset(
-        self,
-        *,
-        seed: int | None = None,
-        options: dict[str, Any] | None = None,
+            self,
+            *,
+            seed: int | None = None,
+            options: dict[str, Any] | None = None,
     ) -> tuple[ObsType, dict[str, Any]]:
         return self.data[0]["prev_obs"][self.agent_id], self.data[0]["info"][self.agent_id]
 
     def step(
-        self, action: ActType
+            self, action: ActType
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
         current_step_data = next(self.current_step)
         return (current_step_data["prev_obs"][self.agent_id],
