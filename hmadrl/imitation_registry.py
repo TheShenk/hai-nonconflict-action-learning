@@ -161,11 +161,10 @@ class DensityTrainer(BaseImitationTrainer):
 
     def __init__(self, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path):
         super().__init__(DensityAlgorithm, venv, demonstrations, rng, inner_algo, reward_net, algo_args, path)
+        self.trainer.train()
 
     def train(self, timesteps, callback):
-        for i in range(timesteps):
-            self.trainer.train()
-            callback(timesteps)
+        self.trainer.train_policy(timesteps)
         self.timesteps += timesteps
 
 
