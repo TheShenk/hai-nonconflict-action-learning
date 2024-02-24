@@ -1,6 +1,8 @@
 import h5py
 import argparse
 
+import numpy as np
+
 parser = argparse.ArgumentParser()
 parser.add_argument('files', type=str, nargs='+')
 parser.add_argument('--output', type=str)
@@ -8,6 +10,7 @@ args = parser.parse_args()
 
 episode_id = 0
 total_steps = 0
+episode_rewards = []
 with h5py.File(args.output, 'w') as result_file:
     for file in args.files:
         with h5py.File(file, 'r') as data:
@@ -17,8 +20,9 @@ with h5py.File(args.output, 'w') as result_file:
                     data.copy(episode, result_file, name=f'episode_{episode_id}')
                     episode_id += 1
                     total_steps += steps_count
+                    episode_rewards.append(sum(data[episode]["rewards"]))
             result_file.attrs.update(data.attrs)
     result_file.attrs['total_episodes'] = episode_id
     result_file.attrs['total_steps'] = total_steps
-    print(f"Episodes: {episode_id}, Steps: {total_steps}")
+    print(f"Episodes: {episode_id}, Steps: {total_steps}, Reward: {np.mean(episode_rewards)} +- {np.std(episode_rewards)}")
 
