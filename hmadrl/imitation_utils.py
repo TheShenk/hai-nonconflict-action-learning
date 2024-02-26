@@ -2,6 +2,7 @@ import pathlib
 import re
 from typing import Dict, Type
 
+import gymnasium.spaces
 import minari
 import numpy as np
 
@@ -9,7 +10,9 @@ from imitation.data.types import TrajectoryWithRew
 from imitation.rewards.reward_nets import AddSTDRewardWrapper, BasicRewardNet, CnnRewardNet, BasicShapedRewardNet, \
     RewardEnsemble, RewardNet
 from ray.rllib.utils.torch_ops import convert_to_torch_tensor
-from stable_baselines3.common.policies import BasePolicy
+from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.distributions import MultiCategoricalDistribution
+from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy, BaseModel
 
 from hmadrl.imitation_registry import RL_REGISTRY, IMITATION_REGISTRY
 from hmadrl.marllib_utils import find_latest_dir
@@ -29,30 +32,50 @@ def make_trajectories(trajectories_data: minari.MinariDataset):
     return trajectories
 
 
-def init_as_multiagent(imitation_policy: BasePolicy, rllib_policy):
+def init_as_multiagent(imitation_model: BaseAlgorithm, rllib_policy):
+
+    imitation_policy = imitation_model.policy
+    action_space = imitation_policy.action_space
+    if isinstance(action_space, gymnasium.spaces.Box) and action_space.dtype.name.startswith("int"):
+        imitation_policy.action_dist = MultiCategoricalDistribution(list(action_space.high - action_space.low
+                                                                         + np.ones_like(action_space.low)))
+        if isinstance(imitation_policy, ActorCriticPolicy):
+            imitation_policy._build(imitation_model.lr_schedule)
+
     rllib_weights = rllib_policy.get_weights()
     imitation_weights = imitation_policy.state_dict()
 
-    converter = {
-        r"p_encoder\.encoder\.(\d+)\._model\.0.(\w+)": "mlp_extractor.policy_net",
-        r"vf_encoder\.encoder\.(\d+)\._model\.0.(\w+)": "mlp_extractor.value_net",
-        # r"p_branch._model.0.(\w+)": "action_net",
-        r"vf_branch._model.0.(\w+)": "value_net"
-    }
+    converter = [
+        (r"p_encoder\.encoder\.(\d+)\._model\.0.(\w+)", "mlp_extractor.policy_net"),
+        (r"vf_encoder\.encoder\.(\d+)\._model\.0.(\w+)", "mlp_extractor.value_net"),
+        (r"p_branch._model.0.(\w+)", "action_net"),
+        (r"vf_branch._model.0.(\w+)", "value_net")
+    ]
+    converter = list(map(lambda layer_converter: (re.compile(layer_converter[0]), layer_converter[1]),
+                         converter))
 
-    for layer_re, imitation_layer_template in converter.items():
-        layer_re = re.compile(layer_re)
-        for rllib_layer in rllib_weights.keys():
-            matching = layer_re.match(rllib_layer)
-            if matching:
-                if len(matching.groups()) == 2:
-                    layer_number, layer_type = matching.groups()
-                    imitation_layer = f"{imitation_layer_template}.{int(layer_number) * 2}.{layer_type}"
-                else:
-                    layer_type = matching.groups()[0]
-                    imitation_layer = f"{imitation_layer_template}.{layer_type}"
-                imitation_weights[imitation_layer] = convert_to_torch_tensor(rllib_weights[rllib_layer])
+    for rllib_layer in rllib_weights.keys():
+        matching = list(filter(lambda match: match[0],
+                               map(lambda layer_converter: (layer_converter[0].match(rllib_layer), layer_converter[1]),
+                                   converter)))
+        assert len(matching) <= 1, f"Error: for {rllib_layer} more than one matched layer found: {list(map(lambda layer_converter: layer_converter[1], matching))}"
+        if matching:
+            matching, imitation_layer_template = matching[0]
+            if len(matching.groups()) == 2:
+                layer_number, layer_type = matching.groups()
+                imitation_layer = f"{imitation_layer_template}.{int(layer_number) * 2}.{layer_type}"
+            else:
+                layer_type = matching.groups()[0]
+                imitation_layer = f"{imitation_layer_template}.{layer_type}"
+            imitation_weights[imitation_layer] = convert_to_torch_tensor(rllib_weights[rllib_layer])
+            print(f"{rllib_layer} -> {imitation_layer}")
+        else:
+            print(f"{rllib_layer} -> no matching found")
+    # print("Difference: ", set(imitation_policy.state_dict().keys()).difference(imitation_weights.keys()))
 
+    # imitation_weights["log_std"] = imitation_weights["action_net.bias"][:5]
+    imitation_weights["action_net.weight"] = imitation_weights["action_net.weight"]
+    imitation_weights["action_net.bias"] = imitation_weights["action_net.bias"]
     imitation_policy.load_state_dict(imitation_weights)
 
 

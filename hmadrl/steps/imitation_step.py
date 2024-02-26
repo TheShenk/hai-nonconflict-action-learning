@@ -58,7 +58,7 @@ def run(settings):
 
         use_multiagent_init = settings['imitation']['inner_algo'].get('use_multiagent_init', False)
         if use_multiagent_init:
-            init_as_multiagent(inner_algo.policy, human_policy)
+            init_as_multiagent(inner_algo, human_policy)
 
         imitation_algo = settings["imitation"]["algo"]["name"]
         imitation_inner_algo = settings["imitation"].get("inner_algo", {}).get("name", "none")

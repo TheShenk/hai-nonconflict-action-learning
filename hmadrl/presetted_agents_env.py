@@ -15,14 +15,17 @@ class RolloutInfo:
     def __init__(self, policy, prev_action):
         self.policy = policy
         self.prev_action = prev_action
+        self.info = None
         self.state = th.from_numpy(np.zeros((2,)))  # TODO: what state size depends on?
 
     def predict(self, obs):
         action, state, info = self.policy.compute_single_action(obs=obs,
                                                                 state=self.state,
+                                                                info=self.info,
                                                                 prev_action=self.prev_action)
         self.prev_action = action
         self.state = state
+        self.info = info
         return action
 
 
