@@ -46,10 +46,10 @@ def run(settings):
     def make_rollout_env():
         rollout_env, _ = make_env(env_settings)
         rollout_env = SingleAgent(rollout_env, policy_mapping, human_agent)
-        rollout_env = GymnasiumFixedHorizon(rollout_env, 300)
+        rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"].get("episode_timesteps", 300))
         return rollout_env
 
-    rollout_env = make_vec_env(make_rollout_env, n_envs=4)
+    rollout_env = make_vec_env(make_rollout_env, n_envs=settings["imitation"].get("n_envs", 8))
 
     def objective(trial: optuna.Trial):
 

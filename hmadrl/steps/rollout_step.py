@@ -1,11 +1,10 @@
-import os
-
 import gymnasium.envs.registration
 from marllib import marl
 import minari
 import argparse
 
 import hmadrl
+from hmadrl.MARLlibWrapper import GymnasiumFixedHorizon
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, rollout, make_env
 from hmadrl.presetted_agents_env import SingleAgent
 from hmadrl.settings_utils import load_settings, import_user_code
@@ -31,6 +30,7 @@ def run(settings):
 
     rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
     rollout_env.spec = gymnasium.envs.registration.EnvSpec(id=settings['env']['name'])
+    rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"].get("episode_timesteps", 300))
     rollout_env = minari.DataCollectorV0(rollout_env)
 
     average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
@@ -43,7 +43,8 @@ def run(settings):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Learning agent in environment. First step of HMADRL algorithm.')
+    parser = argparse.ArgumentParser(description='Collect human trajectories in environments with trained agents. '
+                                                 'Second step of HMADRL algorithm.')
     parser.add_argument('--settings', default='hmadrl.yaml', type=str,
                         help='path to settings file (default: hmadrl.yaml)')
     args = parser.parse_args()

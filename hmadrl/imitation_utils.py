@@ -13,6 +13,7 @@ from ray.rllib.utils.torch_ops import convert_to_torch_tensor
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.distributions import MultiCategoricalDistribution
 from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy, BaseModel
+from tqdm import tqdm
 
 from hmadrl.imitation_registry import RL_REGISTRY, IMITATION_REGISTRY
 from hmadrl.marllib_utils import find_latest_dir
@@ -21,14 +22,15 @@ from hmadrl.settings_utils import get_save_dir
 
 def make_trajectories(trajectories_data: minari.MinariDataset):
 
-    print(trajectories_data.total_steps)
     trajectories = []
-    for episode in trajectories_data.iterate_episodes():
-        trajectories.append(TrajectoryWithRew(acts=episode.actions,
-                                              obs=episode.observations,
-                                              rews=episode.rewards,
-                                              infos=np.empty((episode.total_timesteps,)),
-                                              terminal=True))
+    with tqdm(total=trajectories_data.total_episodes) as pbar:
+        for episode in trajectories_data.iterate_episodes():
+            trajectories.append(TrajectoryWithRew(acts=episode.actions,
+                                                  obs=episode.observations,
+                                                  rews=episode.rewards,
+                                                  infos=np.empty((episode.total_timesteps,)),
+                                                  terminal=True))
+            pbar.update(1)
     return trajectories
 
 
