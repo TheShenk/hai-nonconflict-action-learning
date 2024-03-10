@@ -23,12 +23,13 @@ class PyGamePolicy:
         self.key_action_fn = key_action_fn
 
     def collect_action(self, obs):
+        key = pygame.NOEVENT
         if pygame.get_init():
             events = pygame.event.get()
             for event in events:
                 if event.type == pygame.KEYDOWN:
-                    return self.key_action_fn(event.key, obs)
-        return self.key_action_fn(pygame.NOEVENT, obs)
+                    key = event.key
+        return self.key_action_fn(key, obs)
 
     def __call__(self, obs):
         return self.collect_action(obs)
