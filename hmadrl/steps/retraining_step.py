@@ -72,19 +72,10 @@ def run(settings):
     exp_info['algorithm'] = settings['multiagent']['algo']['name']
     exp_info['restore_path'] = {
         "params_path": params_path,
-        "model_path": model_path,
-        'render': True
+        "model_path": model_path
     }
-    recursive_dict_update(exp_info, {
-        "evaluation_interval": 1,
-        "evaluation_num_episodes": 100,
-        "evaluation_num_workers": 1,
-        "evaluation_config": {
-            "record_env": False,
-            "render_env": True,
-        }
-    })
-    exp_info["stop_timesteps"] = settings['retraining']['timesteps']
+
+    exp_info["stop_timesteps"] = settings['multiagent']['timesteps'] + settings['retraining']['timesteps']
     exp_info['local_dir'] = settings['save']['retraining_model']
     exp_info, run_config, env_info, stop_config, restore_config = get_config(exp_info, env_instance, None, {
                 "policies": policies,
