@@ -49,16 +49,18 @@ def run(settings):
     env_instance, env_info = env
     model_class, model_info = model
 
-    policies = {f'policy_{agent_num}': PolicySpec() for agent_num, agent_id in enumerate(env_instance.agents) if agent_id != settings["rollout"]["human_agent"]}
-    policies["human"] = PolicySpec(ImitationPolicy(humanoid_model, model_class, len(env_instance.agents)))
+    policies = {f'policy_{agent_num}': PolicySpec() for agent_num, agent_id in enumerate(env_instance.agents)}
+    human_policy_index = env_instance.agents.index(settings["rollout"]["human_agent"])
+    human_policy = f"policy_{human_policy_index}"
+    policies[human_policy] = PolicySpec(ImitationPolicy(humanoid_model, model_class, len(env_instance.agents)))
     # policies["human"] = PolicySpec(HumanPolicy(user.policy))
 
     policy_mapping = create_policy_mapping(env_instance)
-    policy_mapping[settings["rollout"]["human_agent"]] = "human"
+    policy_mapping[settings["rollout"]["human_agent"]] = human_policy
 
     policies_to_train = settings["retraining"].get("policies_to_train", env_instance.agents)
     policies_to_train = [policy_mapping[agent_id] for agent_id in policies_to_train]
-    assert "human" not in policies_to_train, "Don't specify human_agent in policies_to_train"
+    assert human_policy not in policies_to_train, "Don't specify human_agent in policies_to_train"
 
     def policy_mapping_fn(agent_id):
         return policy_mapping[agent_id]
@@ -70,8 +72,18 @@ def run(settings):
     exp_info['algorithm'] = settings['multiagent']['algo']['name']
     exp_info['restore_path'] = {
         "params_path": params_path,
-        "model_path": model_path
+        "model_path": model_path,
+        'render': True
     }
+    recursive_dict_update(exp_info, {
+        "evaluation_interval": 1,
+        "evaluation_num_episodes": 100,
+        "evaluation_num_workers": 1,
+        "evaluation_config": {
+            "record_env": False,
+            "render_env": True,
+        }
+    })
     exp_info["stop_timesteps"] = settings['retraining']['timesteps']
     exp_info['local_dir'] = settings['save']['retraining_model']
     exp_info, run_config, env_info, stop_config, restore_config = get_config(exp_info, env_instance, None, {
@@ -80,8 +92,17 @@ def run(settings):
                 "policies_to_train": policies_to_train
             })
 
+    # recursive_dict_update(run_config, {
+    #     "evaluation_interval": 1,
+    #     "evaluation_num_episodes": 100,
+    #     "evaluation_num_workers": 1,
+    #     "evaluation_config": {
+    #         "record_env": False,
+    #         "render_env": True,
+    #     }
+    # })
     algo_runner = POlICY_REGISTRY[settings['multiagent']['algo']['name']]
-    result = algo_runner(model_class, exp_info, run_config, env_info, stop_config, None)
+    algo_runner(model_class, exp_info, run_config, env_info, stop_config, restore_config)
 
 
 if __name__ == "__main__":
