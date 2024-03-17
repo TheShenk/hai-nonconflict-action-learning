@@ -19,8 +19,12 @@ def run(settings):
     hmadrl.marllib_utils.STEP_NAME = "retraining"
     user = import_user_code(settings["code"])
 
-    local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
+    retraining_local_dir, restore_path = get_save_settings(settings["save"]["retraining_model"])
     model_path, params_path = restore_path["model_path"], restore_path["params_path"]
+
+    if not model_path:
+        local_dir, restore_path = get_save_settings(settings["save"]["multiagent"])
+        model_path, params_path = restore_path["model_path"], restore_path["params_path"]
 
     if not model_path:
         checkpoint_path = find_checkpoint(settings['multiagent']['algo']['name'],
@@ -76,7 +80,7 @@ def run(settings):
     }
 
     exp_info["stop_timesteps"] = settings['multiagent']['timesteps'] + settings['retraining']['timesteps']
-    exp_info['local_dir'] = settings['save']['retraining_model']
+    exp_info['local_dir'] = retraining_local_dir
     exp_info, run_config, env_info, stop_config, restore_config = get_config(exp_info, env_instance, None, {
                 "policies": policies,
                 "policy_mapping_fn": policy_mapping_fn,

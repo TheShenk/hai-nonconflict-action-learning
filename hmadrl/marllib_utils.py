@@ -198,7 +198,7 @@ def rollout(env, policy, episodes_count):
             current_episode_reward += reward
             env.render()
         episode_reward.append(current_episode_reward)
-    return sum(episode_reward)/episodes_count
+    return episode_reward
 
 
 def register_env(environment_name: str,

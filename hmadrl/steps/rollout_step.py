@@ -1,4 +1,5 @@
 import gymnasium.envs.registration
+import numpy as np
 from marllib import marl
 import minari
 import argparse
@@ -33,13 +34,13 @@ def run(settings):
     rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"].get("episode_timesteps", 300))
     rollout_env = minari.DataCollectorV0(rollout_env)
 
-    average_reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
+    reward = rollout(rollout_env, user.policy, settings['rollout']['episodes'])
     rollout_env.save_to_disk(settings['save']['trajectory'], {
         "dataset_id": f"{settings['env']['name']}-human-v0",
         "minari_version": "~=0.4.1"
     })
     rollout_env.close()
-    print("Average:", average_reward)
+    print(f"Reward: {np.mean(reward)} +- {np.std(reward)}")
 
 
 if __name__ == "__main__":

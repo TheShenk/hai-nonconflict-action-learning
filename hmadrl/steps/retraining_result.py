@@ -1,3 +1,4 @@
+import numpy as np
 from marllib import marl
 import argparse
 
@@ -31,5 +32,5 @@ policy_mapping.pop(human_agent, None)
 
 rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
 
-average_reward = rollout(rollout_env, user.policy, settings['result']['episodes'])
-print("Average:", average_reward)
+reward = rollout(rollout_env, user.policy, settings['result']['episodes'])
+print(f"Reward: {np.mean(reward)} +- {np.std(reward)}")
