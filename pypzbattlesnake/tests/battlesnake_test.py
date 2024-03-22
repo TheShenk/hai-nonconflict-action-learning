@@ -2,7 +2,7 @@ import numpy as np
 import multiset
 from pettingzoo.test import parallel_api_test
 
-from pypzbattlesnake import Action
+from pypzbattlesnake.common import Action
 from pypzbattlesnake import BattleSnake
 
 REWARD_STEP = 1 / 18

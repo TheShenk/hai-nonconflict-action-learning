@@ -17,14 +17,15 @@ class Snake:
 
     _color = FOOD_COLOR
 
-    def __init__(self, init_pos, team):
+    def __init__(self, init_pos, team, head_color=True):
 
         self.body: list[tuple[int, int]] = [init_pos]
         self.team = team
 
         Snake._color += 1
         self.color = Snake._color
-        Snake._color += 1
+        if head_color:
+            Snake._color += 1
         self.head_color = Snake._color
         self.action = Action.NONE
         self.health = 100
@@ -57,13 +58,17 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
     def __init__(self, teams_count,
                  team_snakes_count, size: Tuple[int, int] = (15, 15),
-                 min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1, render_mode="human"):
+                 min_food_count: int = 5, food_spawn_interval=5, food_reward=0.1, head_color=True,
+                 render_mode="human"):
 
         super().__init__()
         self.teams_count = teams_count
         self.team_snakes_count = team_snakes_count
         self.snakes_count = teams_count * team_snakes_count
-        self.colors_count = 2 * self.snakes_count + BASE_COLORS_COUNT
+        self.colors_count = self.snakes_count + BASE_COLORS_COUNT
+        self.head_color = head_color
+        if self.head_color:
+            self.colors_count += self.snakes_count
 
         self.render_mode = render_mode
 
@@ -128,7 +133,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
         snake_position = iter(self.init_positions)
         for idx, team in enumerate(self.teams):
             for agent in team:
-                self.snakes[agent] = Snake(next(snake_position), team=idx)
+                self.snakes[agent] = Snake(next(snake_position), team=idx, head_color=self.head_color)
 
         self.color_mapping = self.get_color_mapping()
         self.food = set()
@@ -269,18 +274,18 @@ class BattleSnake(pettingzoo.ParallelEnv):
             snake_color_mapping[1] = 1
             current_agent_color = BASE_COLORS_COUNT
             snake_color_mapping[snake.color] = current_agent_color
-            snake_color_mapping[snake.head_color] = current_agent_color + 1
+            snake_color_mapping[snake.head_color] = current_agent_color + self.head_color
             for teammate in self.teams[snake.team]:
                 if teammate != snake_id:
-                    current_agent_color += 2
+                    current_agent_color += 1 + self.head_color
                     snake_color_mapping[self.snakes[teammate].color] = current_agent_color
-                    snake_color_mapping[self.snakes[teammate].head_color] = current_agent_color + 1
+                    snake_color_mapping[self.snakes[teammate].head_color] = current_agent_color + self.head_color
             for opponent_team in range(len(self.teams)):
                 if opponent_team != snake.team:
                     for opponent in self.teams[opponent_team]:
-                        current_agent_color += 2
+                        current_agent_color += 1 + self.head_color
                         snake_color_mapping[self.snakes[opponent].color] = current_agent_color
-                        snake_color_mapping[self.snakes[opponent].head_color] = current_agent_color + 1
+                        snake_color_mapping[self.snakes[opponent].head_color] = current_agent_color + self.head_color
             return snake_color_mapping
 
         return {snake_id: agent_color_mapping(snake_id) for snake_id in self.possible_agents}
@@ -322,7 +327,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent: AgentID):
         dim = math.prod(self.size)
-        dim = np.full((dim,), BASE_COLORS_COUNT + 2*self.snakes_count)
+        dim = np.full((dim,), self.colors_count)
         return gymnasium.spaces.MultiDiscrete(dim)
 
     @functools.lru_cache(maxsize=None)
