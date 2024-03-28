@@ -208,11 +208,11 @@ def register_env(environment_name: str,
 
     def create_marllib_fn(config: dict):
         env = create_fn(config)
-        return MARLlibWrapper(env, max_episode_len, policy_mapping_info)
+        return MARLlibWrapper(env, max_episode_len, policy_mapping_info, config)
 
     def create_coop_marllib_fn(config: dict):
         env = create_fn(config)
-        return CoopMARLlibWrapper(env, max_episode_len, policy_mapping_info)
+        return CoopMARLlibWrapper(env, max_episode_len, policy_mapping_info, config)
 
     ENV_REGISTRY[environment_name] = create_marllib_fn
     COOP_ENV_REGISTRY[environment_name] = create_coop_marllib_fn
@@ -228,6 +228,7 @@ def make_env(environment_settings: dict):
     marllib_env_config.pop("args")
 
     marllib_env_config["env_args"]["map_name"] = environment_settings["map"]
+    marllib_env_config["env_args"]["mask_flag"] = environment_settings["mask_flag"]
     marllib_env_config = set_ray(marllib_env_config)
 
     env_reg_name = marllib_env_config["env"] + "_" + marllib_env_config["env_args"]["map_name"]

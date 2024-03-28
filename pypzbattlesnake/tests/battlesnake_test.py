@@ -70,6 +70,11 @@ def test_reset_position():
     assert env.snakes["snake_1_1"].color == 8
     assert env.snakes["snake_1_1"].head_color == 9
 
+    assert env.action_masks("snake_0_0") == [True, True, True, True, True]
+    assert env.action_masks("snake_0_1") == [True, True, True, True, True]
+    assert env.action_masks("snake_1_0") == [True, True, True, True, True]
+    assert env.action_masks("snake_1_1") == [True, True, True, True, True]
+
 
 def test_step():
     env = BattleSnake(2, 2, (9, 9), 3, 5, 1.0)
@@ -88,6 +93,7 @@ def test_step():
     assert abs(reward["snake_0_0"] - -REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
+    assert env.action_masks("snake_0_0") == [False, True, True, True, True]
 
     observation, reward, terminated, truncated, _ = env.step(
         {"snake_0_0": 2, "snake_0_1": 4,
@@ -96,6 +102,7 @@ def test_step():
 
     assert env.snakes["snake_0_0"].head() == (0, 0)
     assert field[0][0] == 3
+    assert env.action_masks("snake_0_0") == [False, True, False, True, True]
 
     assert abs(reward["snake_0_0"] - -REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
@@ -108,6 +115,7 @@ def test_step():
 
     assert env.snakes["snake_0_0"].head() == (0, 1)
     assert field[0][1] == 3
+    assert env.action_masks("snake_0_0") == [True, True, False, True, True]
 
     assert abs(reward["snake_0_0"] - REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
@@ -124,6 +132,7 @@ def test_step():
     assert abs(reward["snake_0_0"] - REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
+    assert env.action_masks("snake_0_0") == [True, True, True, True, True]
 
 
 def test_border_collision():
@@ -148,6 +157,7 @@ def test_border_collision():
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
     assert count_cell_colors(observation) == multiset.Multiset([3, 0, 1, 0, 1, 0, 1, 0, 1])
+    assert env.action_masks("snake_0_0") == [False, True, True, True, True]
 
     observation, reward, terminated, truncated, _ = env.step({"snake_0_0": 0, "snake_0_1": 4,
                                                               "snake_1_0": 4, "snake_1_1": 4})
@@ -158,6 +168,7 @@ def test_border_collision():
     assert abs(reward["snake_0_0"] - -1.0) < FLOAT_EPS
     assert terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
+    assert env.action_masks("snake_0_0") == [False, False, False, False, True]
 
 
 def test_food_collision():
@@ -193,6 +204,7 @@ def test_another_collision():
     env.snakes["snake_1_0"].body = [(2, 0), (2, 1), (2, 2)]
     env.snakes["snake_1_0"].action = Action.DOWN
     env.food = {(6, 1), (1, 6), (6, 6)}
+    assert env.action_masks("snake_0_0") == [True, True, True, False, True]
 
     observation, reward, terminated, truncated, _ = env.step(
         {"snake_0_0": 3, "snake_0_1": 4,
@@ -210,6 +222,7 @@ def test_another_collision():
     assert abs(reward["snake_1_0"] - 1.0) < FLOAT_EPS
     assert terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
+    assert env.action_masks("snake_0_0") == [False, False, False, False, True]
 
 
 def test_teammate_collision():
@@ -219,6 +232,7 @@ def test_teammate_collision():
     env.snakes["snake_0_1"].body = [(2, 0), (2, 1), (2, 2)]
     env.snakes["snake_0_1"].action = Action.DOWN
     env.food = {(6, 1), (1, 6), (6, 6)}
+    assert env.action_masks("snake_0_0") == [True, True, True, False, True]
 
     observation, reward, terminated, truncated, _ = env.step(
         {"snake_0_0": 3, "snake_0_1": 4,
@@ -236,6 +250,7 @@ def test_teammate_collision():
     assert abs(reward["snake_0_1"] - -1.0) < FLOAT_EPS
     assert terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
+    assert env.action_masks("snake_0_0") == [False, False, False, False, True]
 
 
 def test_head_collision():
@@ -276,6 +291,7 @@ def test_self_collision():
     env.snakes["snake_0_0"].body = [(0, 1), (1, 1), (2, 1), (2, 2), (1, 2)]
     env.snakes["snake_0_0"].action = Action.LEFT
     env.food = {(6, 1), (1, 6), (6, 6)}
+    assert env.action_masks("snake_0_0") == [False, True, True, False, True]
 
     observation, reward, terminated, truncated, _ = env.step(
         {"snake_0_0": 0, "snake_0_1": 4,

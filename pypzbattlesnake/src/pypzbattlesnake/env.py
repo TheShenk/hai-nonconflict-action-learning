@@ -1,6 +1,6 @@
 import functools
 import math
-from typing import Tuple, Dict, Set
+from typing import Tuple, Dict, Set, List
 
 import gymnasium
 import numpy as np
@@ -39,7 +39,7 @@ class Snake:
 
         shift = SHIFT_BY_ACTION[self.action]
 
-        head_block = self.body[-1]
+        head_block = self.head()
         next_block = (head_block[0] + shift[0], head_block[1] + shift[1])
 
         self.body.append(next_block)
@@ -209,11 +209,13 @@ class BattleSnake(pettingzoo.ParallelEnv):
                 eliminate_agents.append(agent)
         self.eliminate(eliminate_agents)
 
+    def is_border_collision(self, position):
+        return not (0 <= position[0] < self.size[0]) or not (0 <= position[1] < self.size[1])
+
     def check_border_collisions(self):
         eliminate_agents = []
         for agent in self.agents:
-            head = self.snakes[agent].head()
-            if not (0 <= head[0] < self.size[0]) or not (0 <= head[1] < self.size[1]):
+            if self.is_border_collision(self.snakes[agent].head()):
                 eliminate_agents.append(agent)
         self.eliminate(eliminate_agents)
 
@@ -228,12 +230,13 @@ class BattleSnake(pettingzoo.ParallelEnv):
             else:
                 snake.body.pop(0)
 
+    def is_body_collision(self, snake, position):
+        return position in snake.body[:-1]
+
     def check_self_collisions(self):
         eliminate_agents = []
         for agent in self.agents:
-            snake = self.snakes[agent]
-            snake_head = snake.head()
-            if snake_head in snake.body[:-1]:
+            if self.is_body_collision(self.snakes[agent], self.snakes[agent].head()):
                 eliminate_agents.append(agent)
         self.eliminate(eliminate_agents)
 
@@ -258,11 +261,11 @@ class BattleSnake(pettingzoo.ParallelEnv):
     def eliminate(self, eliminate_agent):
         for agent in eliminate_agent:
             self.reward[agent] = -1.0
-            self.agents.remove(agent)
             snake = self.snakes[agent]
             for teammate in self.teams[snake.team]:
                 if teammate in self.reward:
                     self.reward[teammate] = -1.0
+            self.agents.remove(agent)
             self.snakes.pop(agent)
             self.eliminated_agents.add(agent)
 
@@ -366,3 +369,26 @@ class BattleSnake(pettingzoo.ParallelEnv):
         if self.food_spawn_timer >= self.food_spawn_interval:
             self.food.add(self.random_empty_position())
             self.food_spawn_timer = 0
+
+    def action_masks(self, agent: AgentID) -> List[bool]:
+
+        def check_action_validity(snake: Snake, action) -> bool:
+            if snake is None: return action == Action.NONE
+            head = snake.head()
+            next_position = (head[0] + SHIFT_BY_ACTION[action][0], head[1] + SHIFT_BY_ACTION[action][1])
+            if self.is_border_collision(next_position):
+                return False
+            for snake_agent, snake in self.snakes.items():
+                if snake_agent == agent and (next_position == snake.tail() or
+                                             next_position == snake.head()):
+                    continue
+                if self.is_body_collision(snake, next_position):
+                    return False
+                if len(snake.body) > 1 and snake.head() == next_position:
+                    return False
+            return True
+
+        snake = self.snakes.get(agent, None)
+        return [check_action_validity(snake, action) for action in Action]
+
+

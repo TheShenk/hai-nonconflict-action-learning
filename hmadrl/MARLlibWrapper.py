@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import warnings
+from collections import OrderedDict
 from typing import Tuple, SupportsFloat, Any
 
 import gym
@@ -136,15 +137,18 @@ class AutoReset(pettingzoo.utils.BaseParallelWrapper):
 
 class MARLlibWrapper(MultiAgentEnv):
 
-    def __init__(self, env: pettingzoo.ParallelEnv, max_episode_len, policy_mapping_info):
+    def __init__(self, env: pettingzoo.ParallelEnv, max_episode_len, policy_mapping_info, config: dict):
         super().__init__()
-
         self.env = env
+        self.unwrapped_env = self.env.unwrapped if hasattr(self.env, "unwrapped") else self.env
+        self.mask_flag = config.get("mask_flag", False)
         self.possible_agents = self.env.possible_agents
         self.num_agents = len(self.possible_agents)
         self.observation_space = gym.spaces.Dict(
             {"obs": convert_space(self.env.observation_space(self.possible_agents[0]))})
         self.action_space = convert_space(self.env.action_space(self.possible_agents[0]))
+        if self.mask_flag:
+            self.observation_space["action_mask"] = gym.spaces.Box(0.0, 1.0, shape=(self.action_space.n,))
 
         self.max_episode_len = max_episode_len
         self.policy_mapping_info = policy_mapping_info
@@ -155,13 +159,19 @@ class MARLlibWrapper(MultiAgentEnv):
 
     def reset(self) -> MultiAgentDict:
         observation, info = self.env.reset()
-        observation = {agent: {"obs": observation[agent]} for agent in observation}
+        observation = {agent: OrderedDict({"obs": observation[agent]}) for agent in observation}
+        if self.mask_flag:
+            for agent in observation:
+                observation[agent]['action_mask'] = np.float32(self.unwrapped_env.action_masks(agent))
         return observation
 
     def step(self, action: MultiAgentDict) -> (
             Tuple)[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         observation, reward, terminated, truncated, info = self.env.step(action)
-        observation = {agent: {"obs": observation[agent]} for agent in observation}
+        observation = {agent: OrderedDict({"obs": observation[agent]}) for agent in observation}
+        if self.mask_flag:
+            for agent in observation:
+                observation[agent]['action_mask'] = np.float32(self.unwrapped_env.action_masks(agent))
         done = {agent: terminated[agent] or truncated[agent] for agent in terminated}
         done["__all__"] = np.all(list(done.values()))
         return observation, reward, done, info
@@ -196,6 +206,9 @@ class CoopMARLlibWrapper(MARLlibWrapper):
     def step(self, action: MultiAgentDict) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         observation, reward, terminated, truncated, info = self.env.step(action)
         observation = {agent: {"obs": observation[agent]} for agent in action.keys()}
+        if self.mask_flag:
+            for agent in observation:
+                observation[agent]['action_mask'] = np.float32(self.unwrapped_env.action_masks(agent))
         coop_reward = sum([reward[agent] for agent in observation])
         reward = {agent: coop_reward for agent in observation}
         done = {agent: terminated[agent] or truncated[agent] for agent in action.keys()}
