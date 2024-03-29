@@ -374,6 +374,8 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         def check_action_validity(snake: Snake, action) -> bool:
             if snake is None: return action == Action.NONE
+            if action != Action.NONE and action == OPPOSITE_ACTION[snake.action]:
+                return False
             head = snake.head()
             next_position = (head[0] + SHIFT_BY_ACTION[action][0], head[1] + SHIFT_BY_ACTION[action][1])
             if self.is_border_collision(next_position):
