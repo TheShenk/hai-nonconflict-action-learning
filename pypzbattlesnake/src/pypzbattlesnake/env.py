@@ -378,13 +378,14 @@ class BattleSnake(pettingzoo.ParallelEnv):
             next_position = (head[0] + SHIFT_BY_ACTION[action][0], head[1] + SHIFT_BY_ACTION[action][1])
             if self.is_border_collision(next_position):
                 return False
-            for snake_agent, snake in self.snakes.items():
-                if snake_agent == agent and (next_position == snake.tail() or
-                                             next_position == snake.head()):
+            for s_agent, s in self.snakes.items():
+                if s_agent == agent and s.head() == next_position:
                     continue
-                if self.is_body_collision(snake, next_position):
+                if s.tail() == next_position:
+                    continue
+                if self.is_body_collision(s, next_position):
                     return False
-                if len(snake.body) > 1 and snake.head() == next_position:
+                if s.head() == next_position:
                     return False
             return True
 
