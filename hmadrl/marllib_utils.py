@@ -143,7 +143,10 @@ def load_trainer_from_checkpoint(checkpoint_path, custom_model=None):
     # This line could be in dict_update but standatr vd configs have policies of type string, not dict. Because of
     # this recursive_dict_update will throw exception.
     params["multiagent"]["policies"] = policies
-    params["model"]["custom_model_config"]["space_obs"] = gym.spaces.Dict({"obs": observation_space})
+    if hasattr(observation_space, "original_space"):
+        params["model"]["custom_model_config"]["space_obs"] = observation_space.original_space
+    else:
+        params["model"]["custom_model_config"]["space_obs"] = gym.spaces.Dict({"obs": observation_space})
     params["model"]["custom_model_config"]["space_act"] = action_space
 
     if custom_model is not None:
