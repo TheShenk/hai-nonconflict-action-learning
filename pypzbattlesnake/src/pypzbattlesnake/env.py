@@ -359,11 +359,14 @@ class BattleSnake(pettingzoo.ParallelEnv):
                 "field_y": self.size[1]}
 
     def check_end_game(self):
-        teams_left = set()
-        for name, snake in self.snakes.items():
-            teams_left.add(snake.team)
+        if self.teams_count > 1:
+            teams_left = set()
+            for name, snake in self.snakes.items():
+                teams_left.add(snake.team)
 
-        return len(teams_left) <= 1
+            return len(teams_left) <= 1
+        else:
+            return len(self.snakes) == 0
 
     def spawn_food(self):
 

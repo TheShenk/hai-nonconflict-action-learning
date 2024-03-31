@@ -50,7 +50,7 @@ class TimeLimit(pettingzoo.utils.BaseParallelWrapper):
     def __init__(self, env, max_episode_steps):
         super().__init__(env)
         self.max_episode_steps = max_episode_steps
-        self.elapsed_steps = None
+        self.elapsed_steps = 0
 
         try:
             self.render_mode = env.render_mode
@@ -115,12 +115,14 @@ class PettingZooFixedHorizon(pettingzoo.utils.BaseParallelWrapper):
     ]:
         observation, reward, terminated, truncated, info = super().step(actions)
         self.current_timestep += 1
-        if (np.array(terminated.values()) | np.array(truncated.values())).all():
+        if (np.array(list(terminated.values())) | np.array(list(truncated.values()))).all():
             observation, info = super().reset()
+            terminated = {agent: False for agent in terminated}
+            truncated = {agent: False for agent in truncated}
 
-        terminated = {agent: False for agent in terminated}
-        truncated = {agent: self.current_timestep >= self.timestep_count or agent_truncated
-                     for agent, agent_truncated in truncated.values()}
+        episode_end = self.current_timestep >= self.timestep_count
+        truncated = {agent: episode_end or agent_truncated
+                     for agent, agent_truncated in truncated.items()}
         return observation, reward, terminated, truncated, info
 
 
