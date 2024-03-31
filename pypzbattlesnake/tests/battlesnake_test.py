@@ -93,7 +93,7 @@ def test_step():
     assert abs(reward["snake_0_0"] - -REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
-    assert env.action_masks("snake_0_0") == [False, True, True, True, True]
+    assert env.action_masks("snake_0_0") == [False, False, True, True, True]
 
     observation, reward, terminated, truncated, _ = env.step(
         {"snake_0_0": 2, "snake_0_1": 4,
@@ -102,7 +102,7 @@ def test_step():
 
     assert env.snakes["snake_0_0"].head() == (0, 0)
     assert field[0][0] == 3
-    assert env.action_masks("snake_0_0") == [False, True, False, True, True]
+    assert env.action_masks("snake_0_0") == [False, True, False, False, True]
 
     assert abs(reward["snake_0_0"] - -REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
@@ -115,7 +115,7 @@ def test_step():
 
     assert env.snakes["snake_0_0"].head() == (0, 1)
     assert field[0][1] == 3
-    assert env.action_masks("snake_0_0") == [True, True, False, True, True]
+    assert env.action_masks("snake_0_0") == [False, True, False, True, True]
 
     assert abs(reward["snake_0_0"] - REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
@@ -132,7 +132,7 @@ def test_step():
     assert abs(reward["snake_0_0"] - REWARD_STEP) < FLOAT_EPS
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
-    assert env.action_masks("snake_0_0") == [True, True, True, True, True]
+    assert env.action_masks("snake_0_0") == [True, True, False, True, True]
 
 
 def test_border_collision():
@@ -157,7 +157,7 @@ def test_border_collision():
     assert not terminated["snake_0_0"]
     assert not truncated["snake_0_0"]
     assert count_cell_colors(observation) == multiset.Multiset([3, 0, 1, 0, 1, 0, 1, 0, 1])
-    assert env.action_masks("snake_0_0") == [False, True, True, True, True]
+    assert env.action_masks("snake_0_0") == [False, False, True, True, True]
 
     observation, reward, terminated, truncated, _ = env.step({"snake_0_0": 0, "snake_0_1": 4,
                                                               "snake_1_0": 4, "snake_1_1": 4})

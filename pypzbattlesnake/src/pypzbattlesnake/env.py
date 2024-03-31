@@ -153,13 +153,13 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         action = {agent: Action(act + 1) for agent, act in action.items()}
 
-        before_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in self.snakes}
+        before_food_distance = {agent: self.find_closest_food(self.snakes[agent].head()) for agent in self.snakes}
 
         for agent, act in action.items():
             if agent in self.snakes:
                 self.snakes[agent].step(act)
 
-        after_food_distance = {agent: self.find_closest_food(self.snakes[agent].head())[1] for agent in self.snakes}
+        after_food_distance = {agent: self.find_closest_food(self.snakes[agent].head()) for agent in self.snakes}
         self.reward = {
             agent: (before_food_distance[agent] - after_food_distance[agent]) / self.max_dist * self.food_reward
             if agent in self.snakes else 0 for agent in action}
@@ -171,7 +171,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
         self.check_head_head_collisions()
         self.check_another_collisions()
 
-        self.spawn_food()
+        try:
+            self.spawn_food()
+        except ValueError as e:
+            pass
 
         end_game = self.check_end_game()
 
@@ -191,16 +194,18 @@ class BattleSnake(pettingzoo.ParallelEnv):
         def distance(point1, point2):
             return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
 
+        if not len(self.food):
+            return 0
+
         closest_food = next(iter(self.food))
         min_dist = distance(closest_food, pos)
 
         for food in self.food:
             dist = distance(food, pos)
             if dist < min_dist:
-                closest_food = food
                 min_dist = dist
 
-        return closest_food, min_dist
+        return min_dist
 
     def check_health(self):
         eliminate_agents = []
@@ -374,7 +379,7 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         def check_action_validity(snake: Snake, action) -> bool:
             if snake is None: return action == Action.NONE
-            if action != Action.NONE and action == OPPOSITE_ACTION[snake.action]:
+            if snake.action != Action.NONE and action == OPPOSITE_ACTION[snake.action]:
                 return False
             head = snake.head()
             next_position = (head[0] + SHIFT_BY_ACTION[action][0], head[1] + SHIFT_BY_ACTION[action][1])
@@ -393,5 +398,3 @@ class BattleSnake(pettingzoo.ParallelEnv):
 
         snake = self.snakes.get(agent, None)
         return [check_action_validity(snake, action) for action in Action]
-
-
