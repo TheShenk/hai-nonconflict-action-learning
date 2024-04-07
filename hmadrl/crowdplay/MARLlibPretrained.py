@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from cloudpickle import cloudpickle
 from ray.rllib.agents import with_common_config
+from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
 
 
@@ -41,9 +42,10 @@ class MARLlibPretrained:
         self.policy = policies[policy_id].policy_class(obs_space=observation_space, action_space=action_space, config=config)
         self.policy.set_state(policy_state)
         self.first_action = first_action
+        self.preprocessor = ModelCatalog.get_preprocessor_for_space(observation_space.original_space, config["model"])
 
     def compute_action(self, obs):
         if self.first_action is not None:
             action, self.first_action = self.first_action, None
             return action
-        return self.policy.compute_single_action(obs)[0]
+        return self.policy.compute_single_action(self.preprocessor.transform(obs))[0]

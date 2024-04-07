@@ -78,7 +78,10 @@ class _ImitationPolicy(CustomPolicy):
         self.n_agents = n_agents
 
     def collect_action(self, obs):
-        action, _ = self.imitation_policy.predict(obs)
+        if "action_mask" in obs.keys():
+            action, _ = self.imitation_policy.predict(obs, action_masks=obs["action_mask"])
+        else:
+            action, _ = self.imitation_policy.predict(obs)
         return action
 
 

@@ -13,7 +13,7 @@ from imitation.util import util
 
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3 import PPO, A2C, DDPG, DQN, TD3
-from sb3_contrib import TRPO, QRDQN, TQC
+from sb3_contrib import TRPO, QRDQN, TQC, MaskablePPO
 
 
 class ImitationTrainer:
@@ -227,5 +227,6 @@ RL_REGISTRY: Dict[str, Type[BaseAlgorithm]] = {
     # "sac": SAC, # Update torch to 1.13 to fix
     "td3": TD3,
     "tqc": TQC,
-    "trpo": TRPO
+    "trpo": TRPO,
+    "maskable_ppo": MaskablePPO
 }

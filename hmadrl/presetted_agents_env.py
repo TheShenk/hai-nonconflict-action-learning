@@ -66,6 +66,9 @@ class SingleAgent(gymnasium.Env):
     def close(self):
         self.env.close()
 
+    def action_masks(self):
+        return self.observation[self.controlled_agent_id]['action_mask']
+
 
 def exclude(dictionary: dict, keys):
     excluded_dict = {}

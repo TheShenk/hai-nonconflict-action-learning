@@ -14,7 +14,6 @@ ActionSpace = gymnasium.spaces.Discrete(5)
 
 
 class Snake:
-
     _color = FOOD_COLOR
 
     def __init__(self, init_pos, team, head_color=True):
@@ -381,9 +380,12 @@ class BattleSnake(pettingzoo.ParallelEnv):
     def action_masks(self, agent: AgentID) -> List[bool]:
 
         def check_action_validity(snake: Snake, action) -> bool:
-            if snake is None: return action == Action.NONE
+            if snake is None:
+                return action == Action.NONE
             if snake.action != Action.NONE and action == OPPOSITE_ACTION[snake.action]:
                 return False
+            if action == Action.NONE:
+                action = snake.action
             head = snake.head()
             next_position = (head[0] + SHIFT_BY_ACTION[action][0], head[1] + SHIFT_BY_ACTION[action][1])
             if self.is_border_collision(next_position):
@@ -400,4 +402,10 @@ class BattleSnake(pettingzoo.ParallelEnv):
             return True
 
         snake = self.snakes.get(agent, None)
-        return [check_action_validity(snake, action) for action in Action]
+        mask = [check_action_validity(snake, action) for action in Action]
+        if not np.any(mask):
+            mask[-1] = True
+        return mask
+
+    def get_head(self, agent):
+        return self.snakes[agent].head()

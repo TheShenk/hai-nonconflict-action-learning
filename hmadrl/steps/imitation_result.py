@@ -4,8 +4,10 @@ import numpy as np
 from marllib import marl
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+from sb3_contrib.common.maskable.evaluation import evaluate_policy as evaluate_policy_maskable
 
 import hmadrl
+from hmadrl.MARLlibWrapper import GymnasiumFixedHorizon
 from hmadrl.imitation_registry import IMITATION_REGISTRY
 from hmadrl.imitation_utils import make_trajectories, get_inner_algo_class_from_settings, find_imitation_checkpoint
 from hmadrl.marllib_utils import load_trainer, create_policy_mapping, make_env
@@ -34,6 +36,7 @@ human_agent = settings['rollout']['human_agent']
 policy_mapping.pop(human_agent, None)
 
 rollout_env = SingleAgent(env_instance, policy_mapping, human_agent)
+rollout_env = GymnasiumFixedHorizon(rollout_env, settings["rollout"].get("episode_timesteps", 300))
 rollout_env = make_vec_env(lambda: rollout_env, n_envs=1)
 rollout_env.render_mode = "human"
 
@@ -48,5 +51,8 @@ assert inner_algo_cls is not None, "Specified inner_algo is not supported"
 rng = np.random.default_rng(0)
 trainer = IMITATION_REGISTRY[settings["imitation"]['algo']['name']]
 policy, _ = trainer.load(str(checkpoint_path), 'cpu', inner_algo_cls)
-mean, std = evaluate_policy(policy, rollout_env, render=True, n_eval_episodes=5)
+if settings["env"].get("mask_flag", False):
+    mean, std = evaluate_policy_maskable(policy, rollout_env, render=True, n_eval_episodes=5)
+else:
+    mean, std = evaluate_policy(policy, rollout_env, render=True, n_eval_episodes=5)
 print("Eval:", mean, std)
