@@ -29,6 +29,7 @@ from marllib.marl.algos.core.IL.trpo import TRPOTrainer
 from marllib.marl.algos.core.VD.facmac import FACMACTrainer
 from marllib.marl.algos.core.VD.vda2c import VDA2CTrainer
 from marllib.marl.algos.core.VD.vdppo import VDPPOTrainer
+from tqdm import tqdm
 
 from hmadrl.MARLlibWrapper import MARLlibWrapper, CoopMARLlibWrapper, TimeLimit
 from hmadrl.settings_utils import get_save_settings, find_checkpoint_in_dir
@@ -187,10 +188,9 @@ def create_policy_mapping(env: MultiAgentEnv) -> Dict[str, str]:
     return policy_mapping
 
 
-def rollout(env, policy, episodes_count):
+def rollout(env, policy, episodes_count, render=True):
     episode_reward = []
-    for episode_index in range(episodes_count):
-        print("Current episode:", episode_index)
+    for _ in tqdm(range(episodes_count)):
         done = False
         observation, _ = env.reset()
         current_episode_reward = 0
@@ -199,7 +199,8 @@ def rollout(env, policy, episodes_count):
             observation, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             current_episode_reward += reward
-            env.render()
+            if render:
+                env.render()
         episode_reward.append(current_episode_reward)
     return episode_reward
 
