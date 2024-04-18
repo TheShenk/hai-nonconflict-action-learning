@@ -76,10 +76,15 @@ class _ImitationPolicy(CustomPolicy):
         super().__init__(observation_space, action_space, config)
         self.imitation_policy = imitation_policy
         self.n_agents = n_agents
+        self.use_mask = config["model"]["custom_model_config"].get("mask_flag", False)
+        self.action_mask_dim = 0
+        self.obs_dim = np.prod(config["model"]["custom_model_config"]["space_obs"]["obs"].shape)
+        if self.use_mask:
+            self.action_mask_dim = config["model"]["custom_model_config"]["space_act"].n
 
     def collect_action(self, obs):
-        if "action_mask" in obs.keys():
-            action, _ = self.imitation_policy.predict(obs, action_masks=obs["action_mask"])
+        if self.use_mask:
+            action, _ = self.imitation_policy.predict(obs[:self.obs_dim], action_masks=obs[self.obs_dim:self.obs_dim + self.action_mask_dim])
         else:
             action, _ = self.imitation_policy.predict(obs)
         return action

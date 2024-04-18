@@ -37,12 +37,12 @@ class SingleAgent(gymnasium.Env):
 
         total_action[self.controlled_agent_id] = action
         self.observation, rewards, dones, infos = self.env.step(total_action)
-        return self.observation[self.controlled_agent_id]['obs'], rewards[self.controlled_agent_id], dones[
+        return np.copy(self.observation[self.controlled_agent_id]['obs']), rewards[self.controlled_agent_id], dones[
             self.controlled_agent_id], False, infos[self.controlled_agent_id]
 
     def reset(self, seed=None, options=None):
         self.observation = self.env.reset()
-        return self.observation[self.controlled_agent_id]['obs'], {}
+        return np.copy(self.observation[self.controlled_agent_id]['obs']), {}
 
     def render(self, mode="human"):
         self.env.render(mode)
