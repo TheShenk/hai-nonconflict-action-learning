@@ -57,8 +57,9 @@ class MultiAgentFootball(ParallelEnv):
         obs = np.clip(obs, -1.0, 1.0)
         inverse_obs = np.clip(inverse_obs, -1.0, 1.0)
 
-        red_reward = self.env.calculate_left_reward()
-        blue_reward = self.env.calculate_right_reward()
+        goal = self.env.reset_goal()
+        red_reward = self.env.calculate_left_reward(goal)
+        blue_reward = self.env.calculate_right_reward(goal)
 
         observations = {agent: obs.copy() for agent in self.red_agents} | \
                        {agent: inverse_obs.copy() for agent in self.blue_agents}

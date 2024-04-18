@@ -172,6 +172,7 @@ def load_trainer(algo: _Algo, env: Tuple[MultiAgentEnv, Dict], model: Tuple[Any,
                                           local_dir)
     else:
         checkpoint_path = restore_path["model_path"]
+    print(f"Checkpoint: {checkpoint_path}")
 
     custom_model = None
     if algo.name in {'iddpg', 'maddpg', 'facmac'}:

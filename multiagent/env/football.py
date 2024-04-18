@@ -13,6 +13,7 @@ class TwoSideFootball(Futbol):
         self.out = None
         self.done = None
         self.ball_init = None
+        self.was_goal = False
         self.init_distance = {}
         self.goal_position = {
             'red': [self.width, self.height/2],
@@ -40,7 +41,7 @@ class TwoSideFootball(Futbol):
 
         self._step('blue', team_B_action, self.action_space_type[1])
 
-    def calculate_reward(self, team_name):
+    def calculate_reward(self, team_name, goal):
         reward = 0
 
         # get reward
@@ -50,7 +51,7 @@ class TwoSideFootball(Futbol):
             reward += self.get_team_reward(self.init_distance[team_name], self.teams[team_name])
             reward += self.get_ball_reward(self.ball_init, ball_after, self.goal_position[team_name])
 
-        if self.ball_contact_goal():
+        if goal:
             bx, _ = self.ball.get_position()
             is_in_left_goal = bx > self.width // 2
 
@@ -61,11 +62,16 @@ class TwoSideFootball(Futbol):
 
         return reward
 
-    def calculate_left_reward(self):
-        return self.calculate_reward('red')
+    def calculate_left_reward(self, goal):
+        return self.calculate_reward('red', goal)
 
-    def calculate_right_reward(self):
-        return self.calculate_reward('blue')
+    def calculate_right_reward(self, goal):
+        return self.calculate_reward('blue', goal)
+
+    def reset_goal(self):
+        goal = self.was_goal
+        self.was_goal = False
+        return goal
 
     def commit(self):
         self.done = False
@@ -76,6 +82,7 @@ class TwoSideFootball(Futbol):
         self.observation, self.inverse_obs = self._get_observation()
 
         if self.ball_contact_goal():
+            self.was_goal = True
             self._position_to_initial()
             self.ball_owner_side = random.choice(["left", "right"])
 
